@@ -13,6 +13,10 @@
 
 export default {
 	async fetch(request, env, ctx): Promise<Response> {
-		return new Response('Hello World!');
+		const answer = await env.AI.run("@cf/meta/llama-3-8b-instruct", {
+			messages: [{ role: "user", content: `What personal gear could bear a traveller rpg NPC which is a veteran scout?` }],
+		  });
+
+		  return new Response(JSON.stringify(answer));
 	},
 } satisfies ExportedHandler<Env>;
