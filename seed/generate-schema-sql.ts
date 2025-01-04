@@ -9,24 +9,25 @@ async function generateSchemaScript() {
     const outputFile = fs.createWriteStream('schema.sql');
 
     outputFile.write('DROP TABLE IF EXISTS equipment;\n\n');
-    outputFile.write(`CREATE TABLE IF NOT EXISTS equipment (
-      Section VARCHAR(255),
-      Subsection VARCHAR(255),
-      Name VARCHAR(255),
-      TL INT,
-      Mass INT,
-      Price VARCHAR(100),
-      AmmoPrice VARCHAR(100),
-      Species VARCHAR(255),
-      Skill VARCHAR(100),
-      Book VARCHAR(100),
-      Page INT,
-      Contraband INT,
-      Category VARCHAR(100),
-      Law INT,
-      Notes TEXT,
-      Mod VARCHAR(100)
-    );\n\n`);
+		outputFile.write(`CREATE TABLE IF NOT EXISTS equipment (
+			id VARCHAR(36),
+			section VARCHAR(255),
+			subsection VARCHAR(255),
+			name VARCHAR(255),
+			tl INT,
+			mass INT,
+			price VARCHAR(100),
+			ammo_price VARCHAR(100),
+			species VARCHAR(255),
+			skill VARCHAR(100),
+			book VARCHAR(100),
+			page INT,
+			contraband INT,
+			category VARCHAR(100),
+			law INT,
+			notes TEXT,
+			mod VARCHAR(100)
+		);\n\n`);
 
     const response = await fetch(CSV_URL);
     if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
@@ -38,16 +39,18 @@ async function generateSchemaScript() {
     });
 
     parser.on('data', (row: any) => {
-      const values = Object.entries(row).map(([key, val]) => {
+      const valueList = Object.entries(row).map(([key, val]) => {
         // Ensure numeric fields are parsed as integers
         if (['TL', 'Mass', 'Page', 'Contraband', 'Law'].includes(key)) {
           return val ? parseInt(val.toString()) || 0 : 0;
         }
         // Keep text fields as they are but enclosed in single quotes
         return `'${(val || '').toString().replace(/'/g, "''")}'`;
-      }).join(', ');
+      })
+      const uuid = `'${crypto.randomUUID()}'`;
+		  const values = [uuid, ...valueList].join(', ');
 
-      const sqlCommand = `INSERT INTO equipment (Section, Subsection, Name, TL, Mass, Price, AmmoPrice, Species, Skill, Book, Page, Contraband, Category, Law, Notes, Mod) VALUES (${values});\n`;
+			const sqlCommand = `INSERT INTO equipment (id, section, subsection, name, tl, mass, price, ammo_price, species, skill, book, page, contraband, category, law, notes, mod) VALUES (${values});\n`;
       outputFile.write(sqlCommand);
     });
 

@@ -6,7 +6,11 @@ Create the index by executing:
 npx wrangler vectorize create traveller-equipment-index --dimensions=768 --metric=cosine
 ```
 
-This command creates a new index named `traveller-equipment-index` with 768 dimensions and the cosine similarity metric. The index is created in the Cloudflare Durable Objects namespace.
+This command creates a new index named `traveller-equipment-index` with 768 dimensions and the cosine similarity metric. The index is created in the Cloudflare Durable Objects namespace. We'll have to use the proper model to generate the embeddings
+according to the index dimensions:
+  - "small": "@cf/baai/bge-small-en-v1.5",  # 384 output dimensions
+  - "medium": "@cf/baai/bge-base-en-v1.5",  # 768 output dimensions
+  - "large": "@cf/baai/bge-large-en-v1.5",  # 1024 output dimensions
 
 Create the DB to contain the embeddings by executing:
 

@@ -8,7 +8,8 @@
 	"private": true,
   "main": "index.ts",
   "scripts": {
-    "schema:generate": "node --experimental-strip-types index.ts",
+    "schema:generate": "node --experimental-strip-types generate-schema-sql.ts",
+		"vectorize": "node --experimental-strip-types vectorize-index.ts",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
