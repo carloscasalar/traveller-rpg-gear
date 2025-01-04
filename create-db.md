@@ -14,30 +14,20 @@ Create the DB to contain the embeddings by executing:
 npx wrangler d1 create traveller-equipment
 ```
 
-Now we have to create the DB table to hold the equipment list. These are a few example rows:
-
-```csv
-Section,Subsection,Name,TL,Mass,Price,AmmoPrice,Species,Skill,Book,Page,Contraband,Category,Law,Notes,Mod
-Armour,Armour,Ablat,9,2,Cr75,0,,,CSC 2,16,Weapons,4,2,,
-Armour,Armour,Advanced Poly Carapace,13,2,Cr35000,0,,,CSC 2,13,Weapons,4,2,,
-```
-
-So the to create the DB table execute:
+Now we have to create the DB table to hold the equipment list. Change to `seed` dir and execute:
 
 ```bash
-npx wrangler d1 execute traveller-equipment --remote --command "CREATE TABLE IF NOT EXISTS equipment (Section TEXT, Subsection TEXT, Name TEXT, TL INT, Mass INT, Price TEXT, AmmoPrice TEXT, Species TEXT, Skill TEXT, Book TEXT, Page INT, Contraband INT, Category TEXT, Law INT, Notes TEXT, Mod TEXT)"
+npm i && npm run schema:generate
 ```
 
-Then go to `seed` dir and execute:
+It will generate a file called `schema.sql`. Execute it in the DB by running:
 
 ```bash
-npm i && npm run seed
+npx wrangler d1 execute traveller-equipment --file=./schema.sql --remote
 ```
 
-It will generate a file called `seed.sh`. Give it execute permissions and run it:
+Or if you want to create it in the local db, use the --local flag:
 
 ```bash
-chmod u+x seed.sh
-sh -c seed.sh
+npx wrangler d1 execute traveller-equipment --file=./schema.sql --local
 ```
-
