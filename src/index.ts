@@ -36,15 +36,113 @@ interface Equipment {
 	notes: string;
 	mod: string;
 }
+interface Character {
+	characteristics: {
+		DEX: number;
+		EDU: number;
+		END: number;
+		INT: number;
+		SOC: number;
+		STR: number;
+	};
+	citizen_category: string;
+	experience: string;
+	first_name: string;
+	role: string;
+	skills: string[];
+	surname: string;
+}
+
+interface EquipmentVector {
+	text: string;
+}
 
 const app = new Hono();
 
 app.post('api/v1/equipment', async (c: Context<{ Bindings: Env }>) => {
-	const answer = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', {
-		messages: [{ role: 'user', content: `What personal gear could bear a traveller rpg NPC which is a veteran scout?` }],
+	// Body is expected to have a character
+	const character = await c.req.json<Character>();
+	const name = `${character.first_name} ${character.surname}`;
+	const characteristics = Object.entries(character.characteristics)
+		.map(([key, value]) => `${key}: ${value}`)
+		.join(', ');
+	const skills = character.skills.join(', ');
+	const { experience, role } = character;
+
+	const question = `
+		${name} is a human who is a ${experience} ${role}.
+		If we rate experience from lower to highest, they will be:
+		- recruit
+		- rookie
+		- intermediate
+		- regular
+		- veteran
+		- elite
+
+		${name} characteristics are ${characteristics}.
+
+		To make a guess about its equipment budget, bear in mind that these are average monthly living expenses based on the SOC characteristic are:
+		- SOC 2, Very poor, month cost Cr 400
+		- SOC 4, Poor, month cost Cr 800
+		- SOC 5, Low, month cost Cr 1,000
+		- SOC 6, Average, month cost Cr 1,200
+		- SOC 7, Good, month cost Cr 1,500
+		- SOC 8, High, month cost Cr 2,000
+		- SOC 10, Very High, month cost Cr 2,500
+		- SOC 12, Rich, month cost Cr 5,000
+		- SOC 14, Very Rich, month cost Cr 12,000
+		- SOC 15, Ludicrously Rich, month cost Cr 20,000
+
+		According to its experience level, ${name} had accumulated a certain amount of credits to spend on equipment.
+
+		${name} skills are ${skills}.
+
+		Typically it will have the equipment necessary for its profession. It will very rarely exceed TL12. If it is in a profession
+		exposed to combat, it will have a bladed weapon, a firearm and the best armour it can afford. If there is a budget to spare,
+		you can also suggest some unexpected equipment for someone in his profession. If it is not a combat-exposed profession,
+		it will typically possess a small sidearm and/or a handgun and light armour. Following this criterion, suggest a
+		list of equipment that ${name} may have accumulated and carried in JSON format. It provides the identifier and name of each
+		item of equipment selected.
+	`;
+
+	const embeddings = await c.env.AI.run('@cf/baai/bge-base-en-v1.5', { text: question });
+	const vectors = embeddings.data[0];
+
+	const vectorQuery = await c.env.VECTORIZE.query(vectors, { topK: 1 });
+	let vecId;
+	if (vectorQuery.matches && vectorQuery.matches.length > 0 && vectorQuery.matches[0]) {
+		vecId = vectorQuery.matches[0].id;
+	} else {
+		console.log('No matching vector found or vectorQuery.matches is empty');
+	}
+
+	let equipmentList: string[] = [];
+	if (vecId) {
+		const query = `SELECT * FROM equipment WHERE id = ?`;
+		const { results } = await c.env.DB.prepare(query).bind(vecId).all<EquipmentVector>();
+		if (results) equipmentList = results.map((vec) => {
+			console.log('vec', vec);
+			return vec.text
+		});
+		console.log('results', results);
+		console.log('equipmentList', equipmentList);
+	}else{
+		console.log('***** No vecId found');
+	}
+
+	const contextMessage = equipmentList.length ? `Context:\n${equipmentList.map((note) => `- ${note}`).join('\n')}` : '';
+
+	const systemPrompt = `When answering the question or responding, use the context provided, if it is provided and relevant.`;
+
+	const { response: answer } = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', {
+		messages: [
+			...(equipmentList.length ? [{ role: 'system', content: contextMessage }] : []),
+			{ role: 'system', content: systemPrompt },
+			{ role: 'user', content: question },
+		],
 	});
 
-	return c.json(answer);
+	return c.text(answer);
 });
 
 app.get('api/v1/equipment', async (c: Context<{ Bindings: Env }>) => {
@@ -62,8 +160,8 @@ app.post('api/v1/admin/index', async (c: Context<{ Bindings: Env }>) => {
 	const lastIndexed = c.req.query('last_indexed') || null;
 	console.log('lastIndexed', lastIndexed);
 	const query = await c.env.DB.prepare('SELECT * FROM equipment WHERE id > ? or ? IS NULL ORDER BY id LIMIT 10')
-	.bind(lastIndexed, lastIndexed)
-	.run<Equipment>();
+		.bind(lastIndexed, lastIndexed)
+		.run<Equipment>();
 
 	if (query.error) {
 		return c.json({ status: '500', error: query.error });
@@ -123,6 +221,10 @@ app.post('api/v1/admin/index', async (c: Context<{ Bindings: Env }>) => {
 	}
 
 	return c.json({ status: '200', message: 'indexing complete', last_indexed: query.results[query.results.length - 1].id });
+});
+
+app.onError((err, c) => {
+	return c.text(err.message);
 });
 
 export default app;
