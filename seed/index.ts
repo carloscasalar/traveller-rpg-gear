@@ -10,22 +10,22 @@ async function generateSchemaScript() {
 
     outputFile.write('DROP TABLE IF EXISTS equipment;\n\n');
     outputFile.write(`CREATE TABLE IF NOT EXISTS equipment (
-      Section TEXT,
-      Subsection TEXT,
-      Name TEXT,
+      Section VARCHAR(255),
+      Subsection VARCHAR(255),
+      Name VARCHAR(255),
       TL INT,
       Mass INT,
-      Price TEXT,
-      AmmoPrice TEXT,
-      Species TEXT,
-      Skill TEXT,
-      Book TEXT,
+      Price VARCHAR(100),
+      AmmoPrice VARCHAR(100),
+      Species VARCHAR(255),
+      Skill VARCHAR(100),
+      Book VARCHAR(100),
       Page INT,
       Contraband INT,
-      Category TEXT,
+      Category VARCHAR(100),
       Law INT,
       Notes TEXT,
-      Mod TEXT
+      Mod VARCHAR(100)
     );\n\n`);
 
     const response = await fetch(CSV_URL);
