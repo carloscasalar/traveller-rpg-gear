@@ -28,3 +28,16 @@ So the to create the DB table execute:
 npx wrangler d1 execute traveller-equipment --remote --command "CREATE TABLE IF NOT EXISTS equipment (Section TEXT, Subsection TEXT, Name TEXT, TL INT, Mass INT, Price TEXT, AmmoPrice TEXT, Species TEXT, Skill TEXT, Book TEXT, Page INT, Contraband INT, Category TEXT, Law INT, Notes TEXT, Mod TEXT)"
 ```
 
+Then go to `seed` dir and execute:
+
+```bash
+npm i && npm run seed
+```
+
+It will generate a file called `seed.sh`. Give it execute permissions and run it:
+
+```bash
+chmod u+x seed.sh
+sh -c seed.sh
+```
+
