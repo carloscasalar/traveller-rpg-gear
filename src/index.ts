@@ -11,6 +11,7 @@
  * Learn more at https://developers.cloudflare.com/workers/
  */
 import { Context, Hono } from 'hono';
+import { stripIndents } from 'common-tags';
 interface Env {
 	DB: D1Database;
 	VECTORIZE: VectorizeIndex;
@@ -53,8 +54,22 @@ interface Character {
 	surname: string;
 }
 
-interface EquipmentVector {
-	text: string;
+interface EquipmentEmbedding {
+	id: string;
+	values: number[];
+	metadata: {
+		name: string;
+		section: string;
+		subsection: string;
+		tl: number;
+		mass: number;
+		price: string;
+		species: string;
+		skill: string;
+		law: number;
+		notes: string;
+		mod: string;
+	};
 }
 
 const app = new Hono();
@@ -69,7 +84,7 @@ app.post('api/v1/equipment', async (c: Context<{ Bindings: Env }>) => {
 	const skills = character.skills.join(', ');
 	const { experience, role } = character;
 
-	const question = `
+	const question = stripIndents`
 		${name} is a human who is a ${experience} ${role}.
 		If we rate experience from lower to highest, they will be:
 		- recruit
@@ -101,38 +116,38 @@ app.post('api/v1/equipment', async (c: Context<{ Bindings: Env }>) => {
 		exposed to combat, it will have a bladed weapon, a firearm and the best armour it can afford. If there is a budget to spare,
 		you can also suggest some unexpected equipment for someone in his profession. If it is not a combat-exposed profession,
 		it will typically possess a small sidearm and/or a handgun and light armour. Following this criterion, suggest a
-		list of equipment that ${name} may have accumulated and carried in JSON format. It provides the identifier and name of each
-		item of equipment selected.
+		list of equipment that ${name} may have accumulated and carried with them.
 	`;
 
 	const embeddings = await c.env.AI.run('@cf/baai/bge-base-en-v1.5', { text: question });
 	const vectors = embeddings.data[0];
 
-	const vectorQuery = await c.env.VECTORIZE.query(vectors, { topK: 1 });
-	let vecId;
-	if (vectorQuery.matches && vectorQuery.matches.length > 0 && vectorQuery.matches[0]) {
-		vecId = vectorQuery.matches[0].id;
-	} else {
-		console.log('No matching vector found or vectorQuery.matches is empty');
+	const vectorQuery = await c.env.VECTORIZE.query(vectors, { topK: 20 });
+	let itemIds: string[] = [];
+	if(vectorQuery.count>0){
+		itemIds = vectorQuery.matches.map((match) => match.id);
+		console.log('scores', vectorQuery.matches.map((match) => match.score));
 	}
 
 	let equipmentList: string[] = [];
-	if (vecId) {
-		const query = `SELECT * FROM equipment WHERE id = ?`;
-		const { results } = await c.env.DB.prepare(query).bind(vecId).all<EquipmentVector>();
-		if (results) equipmentList = results.map((vec) => {
-			console.log('vec', vec);
-			return vec.text
-		});
-		console.log('results', results);
-		console.log('equipmentList', equipmentList);
+	if (itemIds.length>0) {
+		const query = `SELECT * FROM equipment WHERE id IN (SELECT value FROM json_each(?1))`;
+		const allIds = JSON.stringify(itemIds);
+		const { results } = await c.env.DB.prepare(query).bind(allIds).all<Equipment>();
+		if (results) equipmentList = results.map((e) => `${e.name}, TL: ${e.tl}, Price: ${e.price}, Law: ${e.law}, Mass: ${e.mass}, Skill: ${e.skill}, Notes: ${e.notes}`);
 	}else{
-		console.log('***** No vecId found');
+		console.log('***** No equipment suggestions found');
 	}
 
-	const contextMessage = equipmentList.length ? `Context:\n${equipmentList.map((note) => `- ${note}`).join('\n')}` : '';
+	const contextMessage = equipmentList.length ? `Context:\n${equipmentList.map((item) => `- ${item}`).join('\n')}` : '';
+	console.log('contextMessage', contextMessage);
 
-	const systemPrompt = `When answering the question or responding, use the context provided, if it is provided and relevant.`;
+	const systemPrompt = stripIndents`
+	   You are a Traveller RPG assistant helping to design remarkable NPCs for the adventure.
+	   When answering the question or responding, use the context provided, if it is provided and relevant.
+	   Answer in JSON list format.
+	   DON'T explain the answer, just provide the list of equipment.
+	`;
 
 	const { response: answer } = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', {
 		messages: [
