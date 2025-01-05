@@ -1,35 +1,36 @@
 export interface Character {
-	characteristics: {
-		DEX: number;
-		EDU: number;
-		END: number;
-		INT: number;
-		SOC: number;
-		STR: number;
-	};
-	citizen_category: string;
-	experience: Experience;
-	first_name: string;
-	role: string;
-	skills: string[];
-	surname: string;
+    characteristics: {
+        DEX: number;
+        EDU: number;
+        END: number;
+        INT: number;
+        SOC: number;
+        STR: number;
+    };
+    citizen_category: string;
+    experience: Experience;
+    first_name: string;
+    role: string;
+    skills: string[];
+    surname: string;
 }
 export type Experience = 'recruit' | 'rookie' | 'intermediate' | 'regular' | 'veteran' | 'elite';
+export const experienceLevels: Experience[] = ['recruit', 'rookie', 'intermediate', 'regular', 'veteran', 'elite'];
 
 const estimateMonthlyLivingCost = (character: Character): number => {
-	const monthlyLivingCostBySoc: Record<number, number> = {
-		2: 400,
-		4: 800,
-		5: 1000,
-		6: 1200,
-		7: 1500,
-		8: 2000,
-		10: 2500,
-		12: 5000,
-		14: 12000,
-		15: 20000,
-	};
-	return monthlyLivingCostBySoc[character.characteristics.SOC] || 2000;
+    const monthlyLivingCostBySoc: Record<number, number> = {
+        2: 400,
+        4: 800,
+        5: 1000,
+        6: 1200,
+        7: 1500,
+        8: 2000,
+        10: 2500,
+        12: 5000,
+        14: 12000,
+        15: 20000,
+    };
+    return monthlyLivingCostBySoc[character.characteristics.SOC] || 2000;
 };
 /*
 	To make a guess about the character salary, we now live expenses are:
@@ -53,18 +54,18 @@ const estimateMonthlyLivingCost = (character: Character): number => {
 	- elite 10%
 */
 export const estimateSalary = (character: Character, experience?: Experience): number => {
-	const expensesPctByExperience: Record<Experience, number> = {
-		recruit: 70,
-		rookie: 60,
-		intermediate: 50,
-		regular: 40,
-		veteran: 20,
-		elite: 10,
-	};
-	const cost = estimateMonthlyLivingCost(character);
-	const pct = expensesPctByExperience[experience || character.experience] || 40;
-	const salary = Math.round((cost * 100) / pct);
-	return salary;
+    const expensesPctByExperience: Record<Experience, number> = {
+        recruit: 70,
+        rookie: 60,
+        intermediate: 50,
+        regular: 40,
+        veteran: 20,
+        elite: 10,
+    };
+    const cost = estimateMonthlyLivingCost(character);
+    const pct = expensesPctByExperience[experience || character.experience] || 40;
+    const salary = Math.round((cost * 100) / pct);
+    return salary;
 };
 
 /*
@@ -80,24 +81,23 @@ export const estimateSalary = (character: Character, experience?: Experience): n
 	Max budget will be the sum of the estimated savings (salary - living expenses)*time worked at each level.
 */
 export const estimateMaxTotalBudget = (character: Character): number => {
-	const maxMonthsByExperience: Record<Experience, number> = {
-		recruit: 24,
-		rookie: 60,
-		intermediate: 72,
-		regular: 120,
-		veteran: 180,
-		elite: 204,
-	};
+    const maxMonthsByExperience: Record<Experience, number> = {
+        recruit: 24,
+        rookie: 60,
+        intermediate: 72,
+        regular: 120,
+        veteran: 180,
+        elite: 204,
+    };
 
-	const experienceLevels: Experience[] = ['recruit', 'rookie', 'intermediate', 'regular', 'veteran', 'elite'];
-	const characterExperience = experienceLevels.includes(character.experience as Experience) ? character.experience : 'regular';
-	const experienceLevelsAchieved = experienceLevels.slice(0, experienceLevels.indexOf(characterExperience) + 1);
-	const maxBudget = experienceLevelsAchieved.reduce((acc, experience) => {
-		const months = Math.floor(Math.random() * maxMonthsByExperience[experience]);
-		const salary = estimateSalary(character, experience);
-		const expenses = estimateMonthlyLivingCost(character);
-		const savings = (salary - expenses) * months;
-		return acc + savings;
-	}, 0);
-	return maxBudget;
+    const characterExperience = experienceLevels.includes(character.experience as Experience) ? character.experience : 'regular';
+    const experienceLevelsAchieved = experienceLevels.slice(0, experienceLevels.indexOf(characterExperience) + 1);
+    const maxBudget = experienceLevelsAchieved.reduce((acc, experience) => {
+        const months = Math.floor(Math.random() * maxMonthsByExperience[experience]);
+        const salary = estimateSalary(character, experience);
+        const expenses = estimateMonthlyLivingCost(character);
+        const savings = (salary - expenses) * months;
+        return acc + savings;
+    }, 0);
+    return maxBudget;
 };

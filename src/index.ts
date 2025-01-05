@@ -12,120 +12,81 @@
  */
 import { Context, Hono } from 'hono';
 import { stripIndents } from 'common-tags';
-import { Character, estimateSalary, estimateMaxTotalBudget } from './character';
-interface Env {
-	DB: D1Database;
-	VECTORIZE: VectorizeIndex;
-	AI: Ai;
-}
+import { Character } from './Character';
+import { Env } from './env';
+import { LlmRepository } from './llm/LlmQuestionRepository';
+import { BudgetEstimator } from './BudgetEstimator';
 
 interface Equipment {
-	id: string;
-	section: string;
-	subsection: string;
-	name: string;
-	tl: number;
-	mass: number;
-	price: string;
-	ammo_price: string;
-	species: string;
-	skill: string;
-	book: string;
-	page: number;
-	contraband: number;
-	category: string;
-	law: number;
-	notes: string;
-	mod: string;
+    id: string;
+    section: string;
+    subsection: string;
+    name: string;
+    tl: number;
+    mass: number;
+    price: string;
+    ammo_price: string;
+    species: string;
+    skill: string;
+    book: string;
+    page: number;
+    contraband: number;
+    category: string;
+    law: number;
+    notes: string;
+    mod: string;
 }
 
 interface EquipmentEmbedding {
-	id: string;
-	values: number[];
-	metadata: {
-		name: string;
-		section: string;
-		subsection: string;
-		tl: number;
-		mass: number;
-		price: string;
-		species: string;
-		skill: string;
-		law: number;
-		notes: string;
-		mod: string;
-	};
+    id: string;
+    values: number[];
+    metadata: {
+        name: string;
+        section: string;
+        subsection: string;
+        tl: number;
+        mass: number;
+        price: string;
+        species: string;
+        skill: string;
+        law: number;
+        notes: string;
+        mod: string;
+    };
 }
 
 const app = new Hono();
 
-// Given a Character, the endpoint will suggest a budget for equipment distributed in several categories: armour, weapons, tools and commodities.
 app.post('api/v1/budget', async (c: Context<{ Bindings: Env }>) => {
-	// Body is expected to have a character
-	const character = await c.req.json<Character>();
-	const name = `${character.first_name} ${character.surname}`;
-	const characteristics = Object.entries(character.characteristics)
-		.map(([key, value]) => `${key}: ${value}`)
-		.join(', ');
-	const skills = character.skills.join(', ');
-	const { experience, role } = character;
-	const salary = estimateSalary(character);
-	const maxBudget = estimateMaxTotalBudget(character);
+    let character: Character;
+    try {
+      //TODO validate character
+      character = await c.req.json<Character>();
+    } catch (e) {
+      return c.json({ error: 'invalid character' }, 400);
+    }
 
-	const question = stripIndents`
-		${name} is a human who is a ${experience} ${role}.
+    const llmRepository = new LlmRepository(c);
+    const budgetEstimator = new BudgetEstimator(llmRepository);
 
-		${name} characteristics are ${characteristics}.
-
-		${name} skills are ${skills}.
-
-		${name} current salary is ${salary} Cr and the max budget for equipment based on her/his savings along his working life is ${maxBudget} Cr.
-
-		Taking into account the profession of ${name}, suggest a budget for equipment distributed in several categories: armour, weapons, tools and commodities.
-		Provide the response in JSON format, numbers are expressed as credits. Use this format:
-		{
-		    "armour": number,
-			"weapons": number,
-			"tools": number,
-			"commodities": number,
-			"reasoning": string
-		}
-		DON'T explain the answer, just provide the budget JSON object.
-	`;
-
-	const systemPrompt = stripIndents`
-		You are a Traveller RPG assistant helping to design remarkable NPCs for the adventure.
-		The output must be in JSON format as it will be used by the system to return the result in a REST API.
-	`;
-
-	const { response: answer } = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', {
-		messages: [
-			{ role: 'system', content: systemPrompt },
-			{ role: 'user', content: question },
-		],
-	});
-
-	try {
-		const jsonAnswer = JSON.parse(answer);
-		return c.json({ ...jsonAnswer, salary, maxBudget });
-	}catch(e){
-		console.error('unexpected answer format: ', answer)
-		console.error('Error parsing JSON answer', e);
-		return c.json({ error: 'unexpected answer format', answer });
-	}
+    const estimation = await budgetEstimator.estimateBudget(character);
+    if ('error' in estimation) {
+        return c.json(estimation, 500);
+    }
+    return c.json(estimation);
 });
 
 app.post('api/v1/equipment', async (c: Context<{ Bindings: Env }>) => {
-	// Body is expected to have a character
-	const character = await c.req.json<Character>();
-	const name = `${character.first_name} ${character.surname}`;
-	const characteristics = Object.entries(character.characteristics)
-		.map(([key, value]) => `${key}: ${value}`)
-		.join(', ');
-	const skills = character.skills.join(', ');
-	const { experience, role } = character;
+    // Body is expected to have a character
+    const character = await c.req.json<Character>();
+    const name = `${character.first_name} ${character.surname}`;
+    const characteristics = Object.entries(character.characteristics)
+        .map(([key, value]) => `${key}: ${value}`)
+        .join(', ');
+    const skills = character.skills.join(', ');
+    const { experience, role } = character;
 
-	const question = stripIndents`
+    const question = stripIndents`
 		${name} is a human who is a ${experience} ${role}.
 		If we rate experience from lower to highest, they will be:
 		- recruit
@@ -160,133 +121,133 @@ app.post('api/v1/equipment', async (c: Context<{ Bindings: Env }>) => {
 		list of equipment that ${name} may have accumulated and carried with them.
 	`;
 
-	const embeddings = await c.env.AI.run('@cf/baai/bge-base-en-v1.5', { text: question });
-	const vectors = embeddings.data[0];
+    const embeddings = await c.env.AI.run('@cf/baai/bge-base-en-v1.5', { text: question });
+    const vectors = embeddings.data[0];
 
-	const vectorQuery = await c.env.VECTORIZE.query(vectors, { topK: 20 });
-	let itemIds: string[] = [];
-	if (vectorQuery.count > 0) {
-		itemIds = vectorQuery.matches.map((match) => match.id);
-		console.log(
-			'scores',
-			vectorQuery.matches.map((match) => match.score)
-		);
-	}
+    const vectorQuery = await c.env.VECTORIZE.query(vectors, { topK: 20 });
+    let itemIds: string[] = [];
+    if (vectorQuery.count > 0) {
+        itemIds = vectorQuery.matches.map((match) => match.id);
+        console.log(
+            'scores',
+            vectorQuery.matches.map((match) => match.score)
+        );
+    }
 
-	let equipmentList: string[] = [];
-	if (itemIds.length > 0) {
-		const query = `SELECT * FROM equipment WHERE id IN (SELECT value FROM json_each(?1))`;
-		const allIds = JSON.stringify(itemIds);
-		const { results } = await c.env.DB.prepare(query).bind(allIds).all<Equipment>();
-		if (results)
-			equipmentList = results.map(
-				(e) => `${e.name}, TL: ${e.tl}, Price: ${e.price}, Law: ${e.law}, Mass: ${e.mass}, Skill: ${e.skill}, Notes: ${e.notes}`
-			);
-	} else {
-		console.log('***** No equipment suggestions found');
-	}
+    let equipmentList: string[] = [];
+    if (itemIds.length > 0) {
+        const query = `SELECT * FROM equipment WHERE id IN (SELECT value FROM json_each(?1))`;
+        const allIds = JSON.stringify(itemIds);
+        const { results } = await c.env.DB.prepare(query).bind(allIds).all<Equipment>();
+        if (results)
+            equipmentList = results.map(
+                (e) => `${e.name}, TL: ${e.tl}, Price: ${e.price}, Law: ${e.law}, Mass: ${e.mass}, Skill: ${e.skill}, Notes: ${e.notes}`
+            );
+    } else {
+        console.log('***** No equipment suggestions found');
+    }
 
-	const contextMessage = equipmentList.length ? `Context:\n${equipmentList.map((item) => `- ${item}`).join('\n')}` : '';
-	console.log('contextMessage', contextMessage);
+    const contextMessage = equipmentList.length ? `Context:\n${equipmentList.map((item) => `- ${item}`).join('\n')}` : '';
+    console.log('contextMessage', contextMessage);
 
-	const systemPrompt = stripIndents`
+    const systemPrompt = stripIndents`
 	   You are a Traveller RPG assistant helping to design remarkable NPCs for the adventure.
 	   When answering the question or responding, use the context provided, if it is provided and relevant.
 	   Answer in JSON list format.
 	   DON'T explain the answer, just provide the list of equipment.
 	`;
 
-	const { response: answer } = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', {
-		messages: [
-			...(equipmentList.length ? [{ role: 'system', content: contextMessage }] : []),
-			{ role: 'system', content: systemPrompt },
-			{ role: 'user', content: question },
-		],
-	});
+    const { response: answer } = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', {
+        messages: [
+            ...(equipmentList.length ? [{ role: 'system', content: contextMessage }] : []),
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: question },
+        ],
+    });
 
-	return c.text(answer);
+    return c.text(answer);
 });
 
 app.get('api/v1/equipment', async (c: Context<{ Bindings: Env }>) => {
-	const firstEquipment = await c.env.DB.prepare('SELECT * FROM equipment ORDER BY Tl, Name').first<Equipment>();
+    const firstEquipment = await c.env.DB.prepare('SELECT * FROM equipment ORDER BY Tl, Name').first<Equipment>();
 
-	if (!firstEquipment) {
-		return c.json({ status: '500', error: 'no equipment found' });
-	}
+    if (!firstEquipment) {
+        return c.json({ status: '500', error: 'no equipment found' });
+    }
 
-	return c.json({ status: '200', firstEquipment });
+    return c.json({ status: '200', firstEquipment });
 });
 
 app.post('api/v1/admin/index', async (c: Context<{ Bindings: Env }>) => {
-	// Read all rows from the equipment table and stream them to a process that generates and upsert the vector index
-	const lastIndexed = c.req.query('last_indexed') || null;
-	console.log('lastIndexed', lastIndexed);
-	const query = await c.env.DB.prepare('SELECT * FROM equipment WHERE id > ? or ? IS NULL ORDER BY id LIMIT 10')
-		.bind(lastIndexed, lastIndexed)
-		.run<Equipment>();
+    // Read all rows from the equipment table and stream them to a process that generates and upsert the vector index
+    const lastIndexed = c.req.query('last_indexed') || null;
+    console.log('lastIndexed', lastIndexed);
+    const query = await c.env.DB.prepare('SELECT * FROM equipment WHERE id > ? or ? IS NULL ORDER BY id LIMIT 10')
+        .bind(lastIndexed, lastIndexed)
+        .run<Equipment>();
 
-	if (query.error) {
-		return c.json({ status: '500', error: query.error });
-	}
+    if (query.error) {
+        return c.json({ status: '500', error: query.error });
+    }
 
-	if (query.results.length === 0) {
-		return c.json({ status: '200', message: 'no more equipment to index', last_indexed: null });
-	}
+    if (query.results.length === 0) {
+        return c.json({ status: '200', message: 'no more equipment to index', last_indexed: null });
+    }
 
-	const removeThoseWithoutValues = (value: string) => value.split(': ')[1] !== '';
-	const equipmentListData = query.results.map((row) => ({
-		equipment: row,
-		data: [
-			`## Name: ${row.name}`,
-			'### Metadata',
-			`- Section: ${row.section}`,
-			`- Subsection: ${row.subsection}`,
-			`- TL (technology level): ${row.tl}`,
-			`- Category: ${row.category}`,
-			`- Mass: ${row.mass === 0 ? 'negligible' : row.mass}`,
-			`- Price: ${row.price === '0' ? 'free' : row.price}`,
-			`- Ammo Price: ${row.ammo_price === '0' ? '' : row.ammo_price}`,
-			`- Species that uses it: ${row.species}`,
-			`- Skill required to properly use it: ${row.skill}`,
-			`- Source book: ${row.book}`,
-			`- Level of law above which the object is illegal: ${row.law === 0 ? 'legal everywhere' : row.law}`,
-			`- Notes: ${row.notes}`,
-			`- Mod: ${row.mod}`,
-		]
-			.filter(removeThoseWithoutValues)
-			.join('\n'),
-	}));
+    const removeThoseWithoutValues = (value: string) => value.split(': ')[1] !== '';
+    const equipmentListData = query.results.map((row) => ({
+        equipment: row,
+        data: [
+            `## Name: ${row.name}`,
+            '### Metadata',
+            `- Section: ${row.section}`,
+            `- Subsection: ${row.subsection}`,
+            `- TL (technology level): ${row.tl}`,
+            `- Category: ${row.category}`,
+            `- Mass: ${row.mass === 0 ? 'negligible' : row.mass}`,
+            `- Price: ${row.price === '0' ? 'free' : row.price}`,
+            `- Ammo Price: ${row.ammo_price === '0' ? '' : row.ammo_price}`,
+            `- Species that uses it: ${row.species}`,
+            `- Skill required to properly use it: ${row.skill}`,
+            `- Source book: ${row.book}`,
+            `- Level of law above which the object is illegal: ${row.law === 0 ? 'legal everywhere' : row.law}`,
+            `- Notes: ${row.notes}`,
+            `- Mod: ${row.mod}`,
+        ]
+            .filter(removeThoseWithoutValues)
+            .join('\n'),
+    }));
 
-	// For each row, generate a vector embedding. As each single row has to be processed with async/await, we have to use a for loop
-	// and wait for each row to be processed before moving to the next one.
-	for (const { equipment, data } of equipmentListData) {
-		const embeddings = await c.env.AI.run('@cf/baai/bge-base-en-v1.5', { text: [data] });
-		await c.env.VECTORIZE.upsert([
-			{
-				id: equipment.id,
-				values: embeddings.data[0],
-				metadata: {
-					name: equipment.name,
-					section: equipment.section,
-					subsection: equipment.subsection,
-					tl: equipment.tl,
-					mass: equipment.mass,
-					price: equipment.price,
-					species: equipment.species,
-					skill: equipment.skill,
-					law: equipment.law,
-					notes: equipment.notes,
-					mod: equipment.mod,
-				},
-			},
-		]);
-	}
+    // For each row, generate a vector embedding. As each single row has to be processed with async/await, we have to use a for loop
+    // and wait for each row to be processed before moving to the next one.
+    for (const { equipment, data } of equipmentListData) {
+        const embeddings = await c.env.AI.run('@cf/baai/bge-base-en-v1.5', { text: [data] });
+        await c.env.VECTORIZE.upsert([
+            {
+                id: equipment.id,
+                values: embeddings.data[0],
+                metadata: {
+                    name: equipment.name,
+                    section: equipment.section,
+                    subsection: equipment.subsection,
+                    tl: equipment.tl,
+                    mass: equipment.mass,
+                    price: equipment.price,
+                    species: equipment.species,
+                    skill: equipment.skill,
+                    law: equipment.law,
+                    notes: equipment.notes,
+                    mod: equipment.mod,
+                },
+            },
+        ]);
+    }
 
-	return c.json({ status: '200', message: 'indexing complete', last_indexed: query.results[query.results.length - 1].id });
+    return c.json({ status: '200', message: 'indexing complete', last_indexed: query.results[query.results.length - 1].id });
 });
 
 app.onError((err, c) => {
-	return c.text(err.message);
+    return c.text(err.message);
 });
 
 export default app;
