@@ -10,7 +10,7 @@ async function generateSchemaScript() {
 
     outputFile.write('DROP TABLE IF EXISTS equipment;\n\n');
 		outputFile.write(`CREATE TABLE IF NOT EXISTS equipment (
-			id VARCHAR(36),
+			id VARCHAR(36) PRIMARY KEY,
 			section VARCHAR(255),
 			subsection VARCHAR(255),
 			name VARCHAR(255),
