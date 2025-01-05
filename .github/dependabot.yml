@@ -1,0 +1,22 @@
+# .github/dependabot.yml
+version: 2
+updates:
+  # Root directory dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      time: "09:00"
+      timezone: "Europe/Madrid"
+    open-pull-requests-limit: 10
+    versioning-strategy: auto
+
+  # Seed directory dependencies
+  - package-ecosystem: "npm"
+    directory: "/seed"
+    schedule:
+      interval: "monthly"
+      time: "09:00"
+      timezone: "Europe/Madrid"
+    open-pull-requests-limit: 10
+    versioning-strategy: auto
