@@ -12,6 +12,7 @@
  */
 import { Context, Hono } from 'hono';
 import { stripIndents } from 'common-tags';
+import { Character, estimateSalary, estimateMaxTotalBudget } from './character';
 interface Env {
 	DB: D1Database;
 	VECTORIZE: VectorizeIndex;
@@ -37,22 +38,6 @@ interface Equipment {
 	notes: string;
 	mod: string;
 }
-interface Character {
-	characteristics: {
-		DEX: number;
-		EDU: number;
-		END: number;
-		INT: number;
-		SOC: number;
-		STR: number;
-	};
-	citizen_category: string;
-	experience: string;
-	first_name: string;
-	role: string;
-	skills: string[];
-	surname: string;
-}
 
 interface EquipmentEmbedding {
 	id: string;
@@ -73,6 +58,62 @@ interface EquipmentEmbedding {
 }
 
 const app = new Hono();
+
+// Given a Character, the endpoint will suggest a budget for equipment distributed in several categories: armour, weapons, tools and commodities.
+app.post('api/v1/budget', async (c: Context<{ Bindings: Env }>) => {
+	// Body is expected to have a character
+	const character = await c.req.json<Character>();
+	const name = `${character.first_name} ${character.surname}`;
+	const characteristics = Object.entries(character.characteristics)
+		.map(([key, value]) => `${key}: ${value}`)
+		.join(', ');
+	const skills = character.skills.join(', ');
+	const { experience, role } = character;
+	const salary = estimateSalary(character);
+	const maxBudget = estimateMaxTotalBudget(character);
+
+	const question = stripIndents`
+		${name} is a human who is a ${experience} ${role}.
+
+		${name} characteristics are ${characteristics}.
+
+		${name} skills are ${skills}.
+
+		${name} current salary is ${salary} Cr and the max budget for equipment based on her/his savings along his working life is ${maxBudget} Cr.
+
+		Taking into account the profession of ${name}, suggest a budget for equipment distributed in several categories: armour, weapons, tools and commodities.
+		Provide the response in JSON format, numbers are expressed as credits. Use this format:
+		{
+		    "armour": number,
+			"weapons": number,
+			"tools": number,
+			"commodities": number,
+			"reasoning": string
+		}
+		DON'T explain the answer, just provide the budget JSON object.
+	`;
+
+	const systemPrompt = stripIndents`
+		You are a Traveller RPG assistant helping to design remarkable NPCs for the adventure.
+		The output must be in JSON format as it will be used by the system to return the result in a REST API.
+	`;
+
+	const { response: answer } = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', {
+		messages: [
+			{ role: 'system', content: systemPrompt },
+			{ role: 'user', content: question },
+		],
+	});
+
+	try {
+		const jsonAnswer = JSON.parse(answer);
+		return c.json({ ...jsonAnswer, salary, maxBudget });
+	}catch(e){
+		console.error('unexpected answer format: ', answer)
+		console.error('Error parsing JSON answer', e);
+		return c.json({ error: 'unexpected answer format', answer });
+	}
+});
 
 app.post('api/v1/equipment', async (c: Context<{ Bindings: Env }>) => {
 	// Body is expected to have a character
@@ -124,18 +165,24 @@ app.post('api/v1/equipment', async (c: Context<{ Bindings: Env }>) => {
 
 	const vectorQuery = await c.env.VECTORIZE.query(vectors, { topK: 20 });
 	let itemIds: string[] = [];
-	if(vectorQuery.count>0){
+	if (vectorQuery.count > 0) {
 		itemIds = vectorQuery.matches.map((match) => match.id);
-		console.log('scores', vectorQuery.matches.map((match) => match.score));
+		console.log(
+			'scores',
+			vectorQuery.matches.map((match) => match.score)
+		);
 	}
 
 	let equipmentList: string[] = [];
-	if (itemIds.length>0) {
+	if (itemIds.length > 0) {
 		const query = `SELECT * FROM equipment WHERE id IN (SELECT value FROM json_each(?1))`;
 		const allIds = JSON.stringify(itemIds);
 		const { results } = await c.env.DB.prepare(query).bind(allIds).all<Equipment>();
-		if (results) equipmentList = results.map((e) => `${e.name}, TL: ${e.tl}, Price: ${e.price}, Law: ${e.law}, Mass: ${e.mass}, Skill: ${e.skill}, Notes: ${e.notes}`);
-	}else{
+		if (results)
+			equipmentList = results.map(
+				(e) => `${e.name}, TL: ${e.tl}, Price: ${e.price}, Law: ${e.law}, Mass: ${e.mass}, Skill: ${e.skill}, Notes: ${e.notes}`
+			);
+	} else {
 		console.log('***** No equipment suggestions found');
 	}
 
