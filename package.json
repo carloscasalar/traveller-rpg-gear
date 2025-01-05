@@ -11,7 +11,7 @@
   },
   "dependencies": {
 		"common-tags": "1.8.2",
-    "hono": "4.6.15"
+    "hono": "4.6.16"
   },
   "devDependencies": {
 		"@cloudflare/vitest-pool-workers": "^0.5.2",
