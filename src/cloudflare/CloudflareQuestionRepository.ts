@@ -2,7 +2,7 @@ import { Context } from 'hono';
 import { Env } from '../env';
 import { QuestionRepository } from '../QuestionRepository';
 
-export class LlmRepository implements QuestionRepository {
+export class CloudflareQuestionRepository implements QuestionRepository {
     constructor(private readonly context: Context<{ Bindings: Env }>) {}
 
     async ask(systemPrompt: string, question: string, additionalContext?: string): Promise<string> {

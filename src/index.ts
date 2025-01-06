@@ -14,7 +14,7 @@ import { Context, Hono } from 'hono';
 import { stripIndents } from 'common-tags';
 import { Character } from './Character';
 import { Env } from './env';
-import { LlmRepository } from './llm/LlmQuestionRepository';
+import { CloudflareQuestionRepository } from './cloudflare/CloudflareQuestionRepository';
 import { BudgetEstimator } from './BudgetEstimator';
 import { Equipment } from './EquipmentRepository';
 
@@ -23,14 +23,14 @@ const app = new Hono();
 app.post('api/v1/budget', async (c: Context<{ Bindings: Env }>) => {
     let character: Character;
     try {
-      //TODO validate character
-      character = await c.req.json<Character>();
+        //TODO validate character
+        character = await c.req.json<Character>();
     } catch (e) {
-      return c.json({ error: 'invalid character' }, 400);
+        return c.json({ error: 'invalid character' }, 400);
     }
 
-    const llmRepository = new LlmRepository(c);
-    const budgetEstimator = new BudgetEstimator(llmRepository);
+    const questionRepository = new CloudflareQuestionRepository(c);
+    const budgetEstimator = new BudgetEstimator(questionRepository);
 
     const estimation = await budgetEstimator.estimateBudget(character);
     if ('error' in estimation) {
