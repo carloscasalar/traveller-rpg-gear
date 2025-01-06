@@ -17,16 +17,7 @@ export interface EstimateBudgetError {
     answer: string;
 }
 
-// Return type for the estimateBudget function that is either a EstimatedBudget or a EstimateBudgetError:
 export type EstimateBudgetResponse = EstimatedBudget | EstimateBudgetError;
-
-// This is a code example about how to handle the estimateBudget function response:
-// const response = await estimateBudget({ req: { json: async () => character } });
-// if ('error' in response) {
-// 	console.error('Error:', response.error);
-// } else {
-// 	console.log('Armour:', response.armour);
-// ...
 
 export class BudgetEstimator {
     constructor(private readonly questionRepository: QuestionRepository) {}
