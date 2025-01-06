@@ -54,20 +54,26 @@ app.post('api/v1/equipment/wip', async (c: Context<{ Bindings: Env }>) => {
     // Get an budget estimation
     const questionRepository = new CloudflareQuestionRepository(c);
     const budgetEstimator = new BudgetEstimator(questionRepository);
-    const estimation = await budgetEstimator.estimateBudget(character);
-    if ('error' in estimation) {
-        return c.json({error: 'unable to estimate, please try again', message: estimation.answer}, 500);
+    const budget = await budgetEstimator.estimateBudget(character);
+    if ('error' in budget) {
+        return c.json({error: 'unable to estimate, please try again', message: budget.answer}, 500);
     }
 
     // For each budget category (armour, weapons, tools, commodities) ask the personal shopper for suggestions
     const equipmentRepository = new CloudflareEquipmentRepository(c);
     const personalShopper = new PersonalShopper(equipmentRepository);
 
-    const armour = await personalShopper.suggestArmour(character, estimation.armour)
-    if ('error' in armour) {
-        return c.json({error: 'unable to suggest armour, please try again', message: armour.answer}, 500);
+    const armourSuggestion = await personalShopper.suggestArmour(character, budget.armour)
+    if ('error' in armourSuggestion) {
+        return c.json({error: 'unable to suggest armour, please try again', message: armourSuggestion.answer}, 500);
     }
-    // Return the suggestions
+    if (!armourSuggestion.found) {
+        return c.json({armour: null});
+    }
+    const armourDescription = stripIndents`${armourSuggestion.armour.name} (TL ${armourSuggestion.armour.tl}) ${armourSuggestion.armour.price}
+    ${armourSuggestion.augments.length ? '- Augments: ' + armourSuggestion.augments.map(a => a.name).join(', ') : ''}`;
+
+    return c.json({armour: armourDescription, budget});
 });
 
 app.post('api/v1/equipment', async (c: Context<{ Bindings: Env }>) => {

@@ -35,4 +35,6 @@ const sections = [
 ] as const;
 export type Section = (typeof sections)[number];
 
-export interface EquipmentRepository {}
+export interface EquipmentRepository {
+    findByQuestion(semanticQuery: string, maxResults:number): Promise<Equipment[]>;
+}

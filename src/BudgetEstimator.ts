@@ -1,5 +1,5 @@
 import { stripIndents } from 'common-tags';
-import { Character, Experience, experienceLevels } from './Character';
+import { Character, Experience, experienceLevels } from './character';
 import { QuestionRepository } from './QuestionRepository';
 
 export interface EstimatedBudget {
