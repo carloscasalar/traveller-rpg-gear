@@ -16,44 +16,7 @@ import { Character } from './Character';
 import { Env } from './env';
 import { LlmRepository } from './llm/LlmQuestionRepository';
 import { BudgetEstimator } from './BudgetEstimator';
-
-interface Equipment {
-    id: string;
-    section: string;
-    subsection: string;
-    name: string;
-    tl: number;
-    mass: number;
-    price: string;
-    ammo_price: string;
-    species: string;
-    skill: string;
-    book: string;
-    page: number;
-    contraband: number;
-    category: string;
-    law: number;
-    notes: string;
-    mod: string;
-}
-
-interface EquipmentEmbedding {
-    id: string;
-    values: number[];
-    metadata: {
-        name: string;
-        section: string;
-        subsection: string;
-        tl: number;
-        mass: number;
-        price: string;
-        species: string;
-        skill: string;
-        law: number;
-        notes: string;
-        mod: string;
-    };
-}
+import { Equipment } from './EquipmentRepository';
 
 const app = new Hono();
 
