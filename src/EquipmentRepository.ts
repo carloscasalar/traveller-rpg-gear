@@ -1,6 +1,6 @@
 export interface Equipment {
     id: string;
-    section: string;
+    section: Section;
     subsection: string;
     name: string;
     tl: number;
@@ -17,3 +17,22 @@ export interface Equipment {
     notes: string;
     mod: string;
 }
+
+const sections = [
+    'Armour',
+    'Augmentation',
+    'Augments',
+    'Computers',
+    'Discerning Weapons Specialist',
+    'Electronics',
+    'Heavy Weapons',
+    'Home Comforts',
+    'Medical Supplies',
+    'Robots',
+    'Survival Gear',
+    'Tools',
+    'Weapons',
+] as const;
+export type Section = (typeof sections)[number];
+
+export interface EquipmentRepository {}
