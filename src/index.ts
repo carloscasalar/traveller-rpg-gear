@@ -17,6 +17,8 @@ import { Env } from './env';
 import { CloudflareQuestionRepository } from './cloudflare/CloudflareQuestionRepository';
 import { BudgetEstimator } from './BudgetEstimator';
 import { Equipment } from './EquipmentRepository';
+import { CloudflareEquipmentRepository } from './cloudflare/CloudflareEquipmentRepository';
+import { PersonalShopper } from './PersonalShopper';
 
 const app = new Hono();
 
@@ -37,6 +39,35 @@ app.post('api/v1/budget', async (c: Context<{ Bindings: Env }>) => {
         return c.json(estimation, 500);
     }
     return c.json(estimation);
+});
+
+app.post('api/v1/equipment/wip', async (c: Context<{ Bindings: Env }>) => {
+    // Read and validate the character from the body
+    let character: Character;
+    try {
+        //TODO validate character
+        character = await c.req.json<Character>();
+    } catch (e) {
+        return c.json({ error: 'invalid character' }, 400);
+    }
+
+    // Get an budget estimation
+    const questionRepository = new CloudflareQuestionRepository(c);
+    const budgetEstimator = new BudgetEstimator(questionRepository);
+    const estimation = await budgetEstimator.estimateBudget(character);
+    if ('error' in estimation) {
+        return c.json({error: 'unable to estimate, please try again', message: estimation.answer}, 500);
+    }
+
+    // For each budget category (armour, weapons, tools, commodities) ask the personal shopper for suggestions
+    const equipmentRepository = new CloudflareEquipmentRepository(c);
+    const personalShopper = new PersonalShopper(equipmentRepository);
+
+    const armour = await personalShopper.suggestArmour(character, estimation.armour)
+    if ('error' in armour) {
+        return c.json({error: 'unable to suggest armour, please try again', message: armour.answer}, 500);
+    }
+    // Return the suggestions
 });
 
 app.post('api/v1/equipment', async (c: Context<{ Bindings: Env }>) => {
