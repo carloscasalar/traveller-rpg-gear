@@ -1,3 +1,4 @@
+import { Equipment } from './EquipmentRepository';
 export interface Equipment {
     id: string;
     section: Section;
@@ -35,6 +36,22 @@ const sections = [
 ] as const;
 export type Section = (typeof sections)[number];
 
+export interface EquipmentQueryError {
+    error: string;
+    answer: string;
+}
+
+export interface EquipmentNotFound {
+    found: false;
+}
+
+export interface EquipmentFound {
+    found: true;
+    equipment: Equipment[];
+}
+
+export type EquipmentQueryResponse = EquipmentFound | EquipmentNotFound | EquipmentQueryError;
+
 export interface EquipmentRepository {
-    findByQuestion(semanticQuery: string, maxResults:number): Promise<Equipment[]>;
+    findByQuestion(semanticQuery: string, maxResults:number): Promise<EquipmentQueryResponse>;
 }

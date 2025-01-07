@@ -60,7 +60,7 @@ app.post('api/v1/equipment/wip', async (c) => {
     }
 
     // For each budget category (armour, weapons, tools, commodities) ask the personal shopper for suggestions
-    const equipmentRepository = new CloudflareEquipmentRepository(c);
+    const equipmentRepository = new CloudflareEquipmentRepository(c, questionRepository);
     const personalShopper = new PersonalShopper(equipmentRepository);
 
     const armourSuggestion = await personalShopper.suggestArmour(character, budget.armour)

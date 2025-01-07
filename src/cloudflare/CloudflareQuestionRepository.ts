@@ -28,7 +28,6 @@ export class CloudflareQuestionRepository implements QuestionRepository {
     async translateQuestionToEmbeddings(question: string): Promise<number[]> {
         const embeddings = await this.context.env.AI.run(to768EmbeddingsModel, { text: question });
         const vectorizedQuery = embeddings.data[0];
-        this.log('vectorizedQuery =>', vectorizedQuery);
         return vectorizedQuery;
     }
 

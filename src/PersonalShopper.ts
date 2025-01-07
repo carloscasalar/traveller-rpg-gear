@@ -35,26 +35,45 @@ export class PersonalShopper {
 
             The armour should be suitable for someone with ${character.role} duties.
 
-            The budget for the armour is Cr${budget}.
+            The budget for the armour is Cr${budget}, do not spent more.
         `;
 
         const armourSuggestions = await this.equipmentRepository.findByQuestion(semanticQuery, 1);
-        if (armourSuggestions.length === 0) {
+        if ('error' in armourSuggestions) {
+            return {
+                error: `unable to find armour suggestions: ${armourSuggestions.error}`,
+                answer: armourSuggestions.answer,
+            };
+        }
+        if (!armourSuggestions.found) {
             return { found: false };
         }
-        const suggestedAmour = armourSuggestions[0];
+        const suggestedAmour = armourSuggestions.equipment[0];
 
         const askForAugments = stripIndent`
-            Suggest some Augment Options for the armour ${armourSuggestions[0].name} that could be useful for a ${character.experience} ${character.role}.
+            Suggest some Augment Options for the armour ${suggestedAmour.name} that could be useful for a ${character.experience} ${character.role}.
 
             The total budget for the armour and the augments is Cr${budget} and the ${character.experience} has already spent ${suggestedAmour.price}.
+            Do not exceed the budget!.
         `;
         const augmentSuggestions = await this.equipmentRepository.findByQuestion(askForAugments, 3);
+        if ('error' in augmentSuggestions) {
+            this.logError(`unable to find augment suggestions: ${augmentSuggestions.error}, falling back to no augments`);
+            return {
+                found: true,
+                armour: suggestedAmour,
+                augments: [],
+            };
+        }
 
         return {
             found: true,
-            armour: armourSuggestions[0],
-            augments: augmentSuggestions,
+            armour: suggestedAmour,
+            augments: augmentSuggestions.found ? augmentSuggestions.equipment : [],
         };
+    }
+
+    private logError(message: string) {
+        console.error(`*** PersonalShopper: ${message}`);
     }
 }
