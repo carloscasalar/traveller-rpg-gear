@@ -12,7 +12,7 @@
  */
 import { Context, Hono } from 'hono';
 import { stripIndents } from 'common-tags';
-import { Character } from './Character';
+import { Character } from './character';
 import { Env } from './env';
 import { CloudflareQuestionRepository } from './cloudflare/CloudflareQuestionRepository';
 import { BudgetEstimator } from './BudgetEstimator';
@@ -20,9 +20,9 @@ import { Equipment } from './EquipmentRepository';
 import { CloudflareEquipmentRepository } from './cloudflare/CloudflareEquipmentRepository';
 import { PersonalShopper } from './PersonalShopper';
 
-const app = new Hono();
+const app = new Hono<{ Bindings: Env }>();
 
-app.post('api/v1/budget', async (c: Context<{ Bindings: Env }>) => {
+app.post('api/v1/budget', async (c) => {
     let character: Character;
     try {
         //TODO validate character
@@ -41,7 +41,7 @@ app.post('api/v1/budget', async (c: Context<{ Bindings: Env }>) => {
     return c.json(estimation);
 });
 
-app.post('api/v1/equipment/wip', async (c: Context<{ Bindings: Env }>) => {
+app.post('api/v1/equipment/wip', async (c) => {
     // Read and validate the character from the body
     let character: Character;
     try {
@@ -76,7 +76,7 @@ app.post('api/v1/equipment/wip', async (c: Context<{ Bindings: Env }>) => {
     return c.json({armour: armourDescription, budget});
 });
 
-app.post('api/v1/equipment', async (c: Context<{ Bindings: Env }>) => {
+app.post('api/v1/equipment', async (c) => {
     // Body is expected to have a character
     const character = await c.req.json<Character>();
     const name = `${character.first_name} ${character.surname}`;
@@ -168,7 +168,7 @@ app.post('api/v1/equipment', async (c: Context<{ Bindings: Env }>) => {
     return c.text(answer);
 });
 
-app.get('api/v1/equipment', async (c: Context<{ Bindings: Env }>) => {
+app.get('api/v1/equipment', async (c) => {
     const firstEquipment = await c.env.DB.prepare('SELECT * FROM equipment ORDER BY Tl, Name').first<Equipment>();
 
     if (!firstEquipment) {
