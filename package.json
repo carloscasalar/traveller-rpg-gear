@@ -15,12 +15,12 @@
     "zod": "3.24.1"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.5.2",
-    "@cloudflare/workers-types": "^4.20241230.0",
+    "@cloudflare/vitest-pool-workers": "0.5.40",
+    "@cloudflare/workers-types": "4.20241230.0",
     "@types/common-tags": "1.8.4",
-    "typescript": "^5.5.2",
+    "typescript": "5.5.2",
     "vitest": "2.1.8",
-    "wrangler": "^3.60.3"
+    "wrangler": "3.99.0"
   },
   "volta": {
     "node": "22.12.0"
