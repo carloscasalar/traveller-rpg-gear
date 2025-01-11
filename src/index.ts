@@ -10,6 +10,7 @@
  *
  * Learn more at https://developers.cloudflare.com/workers/
  */
+import { AiTextGenerationOutput } from '@cloudflare/workers-types';
 import { Context, Hono } from 'hono';
 import { stripIndents } from 'common-tags';
 import { Character } from './character';
@@ -157,7 +158,7 @@ app.post('api/v1/equipment', async (c) => {
 	   DON'T explain the answer, just provide the list of equipment.
 	`;
 
-    const { response: answer } = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', {
+    const result = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', {
         messages: [
             ...(equipmentList.length ? [{ role: 'system', content: contextMessage }] : []),
             { role: 'system', content: systemPrompt },
@@ -165,7 +166,11 @@ app.post('api/v1/equipment', async (c) => {
         ],
     });
 
-    return c.text(answer);
+    if( 'response' in result ) {
+        return c.json(result.response);
+    }
+
+    return c.json({ error: 'unable to generate response' }, 500);
 });
 
 app.get('api/v1/equipment', async (c) => {
