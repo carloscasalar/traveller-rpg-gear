@@ -1,8 +1,6 @@
-import { it } from 'vitest';
+import { D1Database, VectorizeIndex } from '@cloudflare/workers-types'
 import { stripIndents } from 'common-tags';
-import { Context } from 'hono';
-import { SafeParseReturnType, z } from 'zod';
-import { Env } from '../env';
+import { z } from 'zod';
 import { Equipment, EquipmentQueryResponse, EquipmentRepository } from '../EquipmentRepository';
 import { QuestionRepository } from '../QuestionRepository';
 
@@ -29,7 +27,7 @@ const queryEquipmentIdsSchema = z.object({
 });
 
 export class CloudflareEquipmentRepository implements EquipmentRepository {
-    constructor(private readonly context: Context<{ Bindings: Env }>, private readonly questionRepository: QuestionRepository) {}
+    constructor(private readonly db: D1Database, private readonly vectorize: VectorizeIndex, private readonly questionRepository: QuestionRepository) {}
 
     public async findByQuestion(semanticQuery: string, maxResults: number): Promise<EquipmentQueryResponse> {
         const standaloneQuestion = stripIndents`
@@ -40,7 +38,7 @@ export class CloudflareEquipmentRepository implements EquipmentRepository {
 
         const vectorizedQuery = await this.questionRepository.translateQuestionToEmbeddings(standaloneQuestion);
 
-        const vectorQuery = await this.context.env.VECTORIZE.query(vectorizedQuery, {
+        const vectorQuery = await this.vectorize.query(vectorizedQuery, {
             topK: VECTORIZED_RESULTS_TO_RETRIEVE,
             returnMetadata: 'all',
         });
@@ -103,7 +101,7 @@ export class CloudflareEquipmentRepository implements EquipmentRepository {
 
         const dbQuery = `SELECT * FROM equipment WHERE id IN (SELECT value FROM json_each(?1))`;
         const allIds = JSON.stringify(itemIds);
-        const { results } = await this.context.env.DB.prepare(dbQuery).bind(allIds).all<Equipment>();
+        const { results } = await this.db.prepare(dbQuery).bind(allIds).all<Equipment>();
         if (results.length === 0) {
             this.log(`question returned ${itemIds.join(', ')} but those IDs were not found in the database`);
             return { found: false };

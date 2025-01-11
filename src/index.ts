@@ -31,7 +31,7 @@ app.post('api/v1/budget', async (c) => {
         return c.json({ error: 'invalid character' }, 400);
     }
 
-    const questionRepository = new CloudflareQuestionRepository(c);
+    const questionRepository = new CloudflareQuestionRepository(c.env.AI);
     const budgetEstimator = new BudgetEstimator(questionRepository);
 
     const estimation = await budgetEstimator.estimateBudget(character);
@@ -52,7 +52,7 @@ app.post('api/v1/equipment/wip', async (c) => {
     }
 
     // Get an budget estimation
-    const questionRepository = new CloudflareQuestionRepository(c);
+    const questionRepository = new CloudflareQuestionRepository(c.env.AI);
     const budgetEstimator = new BudgetEstimator(questionRepository);
     const budget = await budgetEstimator.estimateBudget(character);
     if ('error' in budget) {
@@ -60,7 +60,7 @@ app.post('api/v1/equipment/wip', async (c) => {
     }
 
     // For each budget category (armour, weapons, tools, commodities) ask the personal shopper for suggestions
-    const equipmentRepository = new CloudflareEquipmentRepository(c, questionRepository);
+    const equipmentRepository = new CloudflareEquipmentRepository(c.env.DB, c.env.VECTORIZE, questionRepository);
     const personalShopper = new PersonalShopper(equipmentRepository);
 
     const armourSuggestion = await personalShopper.suggestArmour(character, budget.armour)
