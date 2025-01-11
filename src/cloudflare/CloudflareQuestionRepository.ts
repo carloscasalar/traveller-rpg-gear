@@ -2,7 +2,7 @@ import { Context } from 'hono';
 import { Env } from '../env';
 import { QuestionRepository } from '../QuestionRepository';
 
-const questionModel = '@cf/meta/llama-3-8b-instruct';
+const questionModel = '@cf/meta/llama-3.1-8b-instruct-awq';
 const to768EmbeddingsModel = '@cf/baai/bge-base-en-v1.5';
 export class CloudflareQuestionRepository implements QuestionRepository {
     constructor(private readonly context: Context<{ Bindings: Env }>) {}
