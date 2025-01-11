@@ -1,3 +1,4 @@
+import { creditsFromCrFormat } from './../price';
 import { D1Database, VectorizeIndex } from '@cloudflare/workers-types';
 import { stripIndents } from 'common-tags';
 import { Equipment, EquipmentCriteria, EquipmentRepository } from '../EquipmentRepository';
@@ -32,19 +33,24 @@ export class CloudflareEquipmentRepository implements EquipmentRepository {
             if (criteria.sections.type === 'sections') {
                 return `section should be one of ${criteria.sections.sections.join(', ')}.`;
             }
-            return `section/subsection should be one of ${criteria.sections.sections.map(({ section, subsection }) => `${section}/${subsection}`).join(', ')}.`;
+            return `section/subsection should be one of ${criteria.sections.sections
+                .map(({ section, subsection }) => `${section}/${subsection}`)
+                .join(', ')}.`;
         };
-        const getPriceFilter = (criteria: EquipmentCriteria) => !criteria.maxPrice ? '' :
-        `prices should be lower than ${toCrFormat(criteria.maxPrice)} credits. Prices are provided in CrX format where Cr means credits and X is an integer number with comma separator for thousands.`;
-        const getTLFilter = (criteria: EquipmentCriteria) => !criteria.maxTL ? '' : `TL should be lower than ${criteria.maxTL}.`;
-        const getAdditionalContext = (additionalContext: string | null) => additionalContext ? `\nAdditional context: ${additionalContext}` : '';
+        const getPriceFilter = (criteria: EquipmentCriteria) =>
+            !criteria.maxPrice
+                ? ''
+                : `prices should be lower than ${criteria.maxPrice} credits. Prices are provided in CrX format where Cr means credits and X is an integer number that can be represented with comma separator for thousands or as a plain integer.`;
+        const getTLFilter = (criteria: EquipmentCriteria) => (!criteria.maxTL ? '' : `TL should be lower than ${criteria.maxTL}.`);
+        const getAdditionalContext = (additionalContext: string | null) =>
+            additionalContext ? `\nAdditional context: ${additionalContext}` : '';
         const question = stripIndents`
             Suggest equipment items that match the following criteria:
             ${getSectionsFilter(criteria)}
             ${getPriceFilter(criteria)}
             ${getTLFilter(criteria)}
             ${getAdditionalContext(additionalContext)}
-        `
+        `;
         this.log('question:', question);
 
         const vectorizedQuery = await this.questionRepository.translateQuestionToEmbeddings(question);
@@ -54,11 +60,9 @@ export class CloudflareEquipmentRepository implements EquipmentRepository {
             return [];
         }
 
-        const equipmentIds = vectorQuery.matches
-            .filter((match) => match.score > GOOD_ENOUGH_SCORE_THRESHOLD)
-            .map((match) => match.id);
+        const equipmentIds = vectorQuery.matches.filter((match) => match.score > GOOD_ENOUGH_SCORE_THRESHOLD).map((match) => match.id);
 
-        if(equipmentIds.length === 0) {
+        if (equipmentIds.length === 0) {
             this.log('no results found on the vectorized results with a good enough score');
             return [];
         }
@@ -67,7 +71,12 @@ export class CloudflareEquipmentRepository implements EquipmentRepository {
         const allIds = JSON.stringify(equipmentIds);
         const { results } = await this.db.prepare(dbQuery).bind(allIds).all<Equipment>();
 
-        return results;
+        const itemsUnderMaxPrice = results
+            // I couldn't manage the ia to understand this constraint, so I'm forcing it here :(
+            .filter((equipment) => criteria.maxPrice == undefined || creditsFromCrFormat(equipment.price) <= criteria.maxPrice);
+        this.log('raw item results:', results.length);
+        this.log('items under max price:', itemsUnderMaxPrice.length);
+        return itemsUnderMaxPrice;
     }
 
     private log(...args: any[]) {

@@ -24,7 +24,7 @@ export type SingleSuggestion<SuggestedEntity> = SuggestedEntity | NoSuggestionFo
 
 const queryEquipmentIdsSchema = z.object({
     itemIds: z.array(z.string()),
-    reasoning: z.string(),
+    reasoning: z.string().optional(),
 });
 
 export class PersonalShopper {
@@ -41,11 +41,15 @@ export class PersonalShopper {
 
         const additionalArmourContext = `suitable for a ${character.role} with ${character.experience} experience.`;
         const suitableAmours = await this.equipmentRepository.findByCriteria(armourCriteria, additionalArmourContext, 30);
-        this.log('Suitable armours:\n', suitableAmours.map((i) => `${i.name} [${i.section}/${i.subsection}] [${i.tl}] [${creditsFromCrFormat(i.price)}] [${i.mass}] [${i.skill}]`));
+        if (suitableAmours.length === 0) {
+            return { found: false };
+        }
 
         const additionalShoppingContext = stripIndent`These are the available items in format "id: name [section/subsection] [tl] [price in credits] [weight in kg] [skill requirement if any]:
-            ${suitableAmours.map((i) => `${i.id}: ${i.name} [${i.section}/${i.subsection}] [${i.tl}] [${i.price}] [${i.mass}] [${i.skill}]`).join('\n')}
+        ${suitableAmours.map((i) => `${i.id}: ${i.name} [${i.section}/${i.subsection}] [${i.tl}] [${creditsFromCrFormat(i.price)}] [${i.mass}] [${i.skill}]`).join('\n')}
         `;
+        this.log('shopping context:', additionalShoppingContext);
+
         const systemMessage = stripIndent`You are a personal shopper for Traveller RPG NPCs.
             You will be asked to suggest equipment for a character based on their characteristics, experience, skills and budget.
             You will NEVER suggest an item with price higher than the budget.
@@ -64,13 +68,13 @@ export class PersonalShopper {
             .map(([key, value]) => `${key}: ${value}`)
             .join(', ')}
 
-            I cannot spend more than Cr${budget}.
+            My budget is ${budget} Credits and I cannot exceed it.
         `;
         const whatDoIWant = stripIndent`I want you to suggest me one single armour to wear
-        Answer in JSON format, use the 'reasoning' attribute to explain your choices if you need to:
+        Answer in JSON format, don't explain the answer:
             {
-                "itemIds": string[],
-                "reasoning": string
+                itemIds: string[],
+                reasoning?: string
             }
         `;
 
@@ -94,6 +98,7 @@ export class PersonalShopper {
         }
         const armour = suitableAmours.find((a) => a.id === armoursSuggestion.data.itemIds[0]);
         if (!armour) {
+            this.logError(`Armour ID suggested does not exists ${armoursSuggestion.data.itemIds[0]}`);
             return { error: 'armour ID suggested does not exists', answer: rawArmourSuggestion };
         }
 
