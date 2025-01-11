@@ -1,3 +1,4 @@
+import { SectionsCriteria } from './EquipmentRepository';
 export interface Equipment {
     id: string;
     section: Section;
@@ -35,22 +36,24 @@ const sections = [
 ] as const;
 export type Section = (typeof sections)[number];
 
-export interface EquipmentQueryError {
-    error: string;
-    answer: string;
+export interface ListOfSectionsSubsectionCriteria{
+    type: 'sections-subsection';
+    sections: {section: Section, subsection: string}[];
 }
 
-export interface EquipmentNotFound {
-    found: false;
+export interface ListOfSectionsCriteria {
+    type: 'sections';
+    sections: Section[];
 }
 
-export interface EquipmentFound {
-    found: true;
-    equipment: Equipment[];
-}
+export type SectionsCriteria = ListOfSectionsCriteria | ListOfSectionsSubsectionCriteria;
 
-export type EquipmentQueryResponse = EquipmentFound | EquipmentNotFound | EquipmentQueryError;
+export interface EquipmentCriteria {
+    sections: SectionsCriteria;
+    maxPrice?: number;
+    maxTL?: number;
+}
 
 export interface EquipmentRepository {
-    findByQuestion(semanticQuery: string, maxResults:number): Promise<EquipmentQueryResponse>;
+    findByCriteria(criteria: EquipmentCriteria, additionalContext: string, maxResults: number): Promise<Equipment[]>;
 }
