@@ -1,4 +1,3 @@
-import { SectionsCriteria } from './EquipmentRepository';
 export interface Equipment {
     id: string;
     section: Section;
