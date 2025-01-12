@@ -71,12 +71,11 @@ export class CloudflareEquipmentRepository implements EquipmentRepository {
         const allIds = JSON.stringify(equipmentIds);
         const { results } = await this.db.prepare(dbQuery).bind(allIds).all<Equipment>();
 
-        const itemsUnderMaxPrice = results
-            // I couldn't manage the ia to understand this constraint, so I'm forcing it here :(
-            .filter((equipment) => criteria.maxPrice == undefined || creditsFromCrFormat(equipment.price) <= criteria.maxPrice);
-        this.log('raw item results:', results.length);
-        this.log('items under max price:', itemsUnderMaxPrice.length);
-        return itemsUnderMaxPrice;
+        // Because of these are only the best scored items, they can exceed some of the criteria
+        const meetsPriceCriteria = (e: Equipment) => (criteria.maxPrice == undefined || creditsFromCrFormat(e.price) <= criteria.maxPrice!);
+        const meetsTLCriteria = (e: Equipment) => (criteria.maxTL == undefined || e.tl <= criteria.maxTL!);
+        const items = results.filter((e) => meetsPriceCriteria(e) && meetsTLCriteria(e));
+        return items;
     }
 
     private log(...args: any[]) {
