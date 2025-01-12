@@ -1,7 +1,7 @@
 import { stripIndent } from 'common-tags';
 import { z } from 'zod';
 import { Character, experienceLevels } from './character';
-import { Equipment, EquipmentCriteria, EquipmentRepository } from './EquipmentRepository';
+import { Equipment, EquipmentCriteria, EquipmentRepository, SectionsCriteria } from './EquipmentRepository';
 import { QuestionRepository } from './QuestionRepository';
 import { creditsFromCrFormat } from './price';
 
@@ -29,7 +29,33 @@ const queryEquipmentIdsSchema = z.object({
 
 export class PersonalShopper {
     constructor(private readonly equipmentRepository: EquipmentRepository, private readonly questionRepository: QuestionRepository) {}
-    async suggestArmour(character: Character, budget: number): Promise<SingleSuggestion<ArmourSuggestion>> {
+    public async suggestArmour(character: Character, budget: number): Promise<SingleSuggestion<ArmourSuggestion>> {
+        const suitableAmours = await this.getAvailableArmours(character, budget);
+        if (suitableAmours.length === 0) {
+            return { found: false };
+        }
+
+        const whatDoIWant = 'I want you to suggest me ONE single armour to wear';
+        const armourSuggestions = await this.suggestEquipment(character, whatDoIWant, suitableAmours, budget);
+        if ('error' in armourSuggestions) {
+            this.logError(`Error suggesting armour: ${armourSuggestions.error}`);
+            this.log('raw armour suggestion:', armourSuggestions.answer);
+            return {found: false};
+        }
+
+        if (armourSuggestions.length > 1) {
+            this.log('More than one armour suggested, taking the first one', armourSuggestions.map((a) => `${a.id}: ${a.name}`).join(', '));
+        }
+        const armour = armourSuggestions[0];
+
+        return {
+            found: true,
+            armour,
+            augments: [],
+        };
+    }
+
+    private async getAvailableArmours(character: Character, budget: number): Promise<Equipment[]> {
         const armourCriteria: EquipmentCriteria = {
             sections: {
                 type: 'sections',
@@ -40,19 +66,18 @@ export class PersonalShopper {
         };
 
         const additionalArmourContext = `suitable for a ${character.role} with ${character.experience} experience.`;
-        const suitableAmours = await this.equipmentRepository.findByCriteria(armourCriteria, additionalArmourContext, 30);
-        if (suitableAmours.length === 0) {
-            return { found: false };
-        }
+        return this.equipmentRepository.findByCriteria(armourCriteria, additionalArmourContext, 30);
+    }
 
+    private async suggestEquipment(character: Character, whatDoIWant: string, itemsAvailable: Equipment[], budget: number): Promise<Equipment[]|SuggestionError> {
         const additionalShoppingContext = stripIndent`These are the available items in format "id: name [section/subsection] [tl] [price in credits] [weight in kg] [skill requirement if any]:
-        ${suitableAmours.map((i) => `${i.id}: ${i.name} [${i.section}/${i.subsection}] [${i.tl}] [${creditsFromCrFormat(i.price)}] [${i.mass}] [${i.skill}]`).join('\n')}
+        ${itemsAvailable.map((i) => `${i.id}: ${i.name} [${i.section}/${i.subsection}] [${i.tl}] [${creditsFromCrFormat(i.price)}] [${i.mass}] [${i.skill}]`).join('\n')}
         `;
         this.log('shopping context:', additionalShoppingContext);
 
         const systemMessage = stripIndent`You are a personal shopper for Traveller RPG NPCs.
-            You will be asked to suggest equipment for a character based on their characteristics, experience, skills and budget.
-            You will NEVER suggest an item with price higher than the budget.
+            You will be asked to suggest equipment for a NPC based on their characteristics, experience, skills and budget.
+            You will NEVER suggest a group of items that together cost more than the NPC's budget.
             For example, if the budget is 1000, and there is an item with price 10000 you'll never suggest it because 10000 (the price) is higher than 1000 (the budget). If there is no item within the budget, is ok to suggest nothing.
             Keep in mind that experience levels are these, from lower to higher: ${experienceLevels.join(', ')}.
             Characteristics are rated from 2 to 15. Characters with higher SOC (social standing) and/or experience should have access to higher TL (tech level) equipment.
@@ -70,7 +95,8 @@ export class PersonalShopper {
 
             My budget is ${budget} Credits and I cannot exceed it.
         `;
-        const whatDoIWant = stripIndent`I want you to suggest me one single armour to wear
+
+        const question = stripIndent`${whatDoIWant}
         Answer in JSON format, don't explain the answer:
             {
                 itemIds: string[],
@@ -78,35 +104,26 @@ export class PersonalShopper {
             }
         `;
 
-        const rawArmourSuggestion = await this.questionRepository.ask(systemMessage, `${whoAmI}${whatDoIWant}`, additionalShoppingContext);
-        let armoursSuggestion;
+        const rawItemsSuggestion = await this.questionRepository.ask(systemMessage, `${whoAmI}${question}`, additionalShoppingContext);
+        let itemsSuggestion;
         try {
-            const parsedAnswer = JSON.parse(rawArmourSuggestion);
-            armoursSuggestion = queryEquipmentIdsSchema.safeParse(parsedAnswer);
-            if (!armoursSuggestion.success) {
-                return { error: 'Unexpected answer response shape', answer: rawArmourSuggestion };
+            const parsedAnswer = JSON.parse(rawItemsSuggestion);
+            itemsSuggestion = queryEquipmentIdsSchema.safeParse(parsedAnswer);
+            if (!itemsSuggestion.success) {
+                return { error: 'Unexpected answer response shape', answer: rawItemsSuggestion };
             }
         } catch (e) {
-            return { error: 'Error parsing items answer response', answer: rawArmourSuggestion };
-        }
-        this.log('raw armour suggestion:', armoursSuggestion.data);
-        if (armoursSuggestion.data.itemIds.length === 0) {
-            return { found: false };
-        }
-        if (armoursSuggestion.data.itemIds.length > 1) {
-            this.log('More than one armour suggested, taking the first one', armoursSuggestion.data.itemIds);
-        }
-        const armour = suitableAmours.find((a) => a.id === armoursSuggestion.data.itemIds[0]);
-        if (!armour) {
-            this.logError(`Armour ID suggested does not exists ${armoursSuggestion.data.itemIds[0]}`);
-            return { error: 'armour ID suggested does not exists', answer: rawArmourSuggestion };
+            return { error: 'Error parsing items answer response', answer: rawItemsSuggestion };
         }
 
-        return {
-            found: true,
-            armour,
-            augments: [],
-        };
+        return itemsSuggestion.data.itemIds.reduce((acc: Equipment[], itemId) => {
+            const item = itemsAvailable.find((i) => i.id === itemId);
+            if (!item) {
+                this.logError(`Item ID suggested does not exists ${itemId}`);
+                return acc;
+            }
+            return [...acc, item];
+        }, []);
     }
 
     private log(...args: unknown[]) {
