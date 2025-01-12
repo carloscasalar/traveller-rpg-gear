@@ -47,11 +47,28 @@ export class PersonalShopper {
             this.log('More than one armour suggested, taking the first one', armourSuggestions.map((a) => `${a.id}: ${a.name}`).join(', '));
         }
         const armour = armourSuggestions[0];
+        const remainingBudget = budget - creditsFromCrFormat(armour.price);
+        const suitableAugments = await this.getAvailableAugments(character, remainingBudget);
+        if (suitableAugments.length === 0) {
+            return {
+                found: true,
+                armour,
+                augments: [],
+            };
+        }
+
+        const whatDoIWantAugments = `I want you to suggest me up to three augmentations for my amour ${armour.name}`;
+        const augmentsSuggestions = await this.suggestEquipment(character, whatDoIWantAugments, suitableAugments, remainingBudget);
+        if ('error' in augmentsSuggestions) {
+            this.logError(`Error suggesting augments: ${augmentsSuggestions.error}`);
+            this.log('raw augments suggestion:', augmentsSuggestions.answer);
+            return {found: true, armour, augments: []};
+        }
 
         return {
             found: true,
             armour,
-            augments: [],
+            augments: augmentsSuggestions,
         };
     }
 
@@ -60,6 +77,24 @@ export class PersonalShopper {
             sections: {
                 type: 'sections',
                 sections: ['Armour'],
+            },
+            maxPrice: budget,
+            maxTL: 12, // TODO: infer from SOC and/or experience
+        };
+
+        const additionalArmourContext = `suitable for a ${character.role} with ${character.experience} experience.`;
+        return this.equipmentRepository.findByCriteria(armourCriteria, additionalArmourContext, 30);
+    }
+
+    private async getAvailableAugments(character: Character, budget: number): Promise<Equipment[]> {
+        const armourCriteria: EquipmentCriteria = {
+            sections: {
+                type: 'sections-subsection',
+                sections: [
+                    { section: 'Armour', subsection: 'Armour Modifications' },
+                    { section: 'Armour', subsection: 'Armour Mods' },
+                    { section: 'Augments', subsection: 'Augment Options' },
+                ],
             },
             maxPrice: budget,
             maxTL: 12, // TODO: infer from SOC and/or experience
@@ -119,7 +154,7 @@ export class PersonalShopper {
         return itemsSuggestion.data.itemIds.reduce((acc: Equipment[], itemId) => {
             const item = itemsAvailable.find((i) => i.id === itemId);
             if (!item) {
-                this.logError(`Item ID suggested does not exists ${itemId}`);
+                this.logError(`Item ID suggested does not exists ${itemId} [${itemsSuggestion.data.reasoning}]`);
                 return acc;
             }
             return [...acc, item];
