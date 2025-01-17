@@ -56,7 +56,7 @@ app.post('api/v1/equipment/wip', async (c) => {
     const budgetEstimator = new BudgetEstimator(questionRepository);
     const budget = await budgetEstimator.estimateBudget(character);
     if ('error' in budget) {
-        return c.json({ error: 'unable to estimate, please try again', message: budget.answer }, 500);
+        return c.json({ error: 'unable to estimate, please try again', message: budget.context }, 500);
     }
 
     // For each budget category (armour, weapons, tools, commodities) ask the personal shopper for suggestions

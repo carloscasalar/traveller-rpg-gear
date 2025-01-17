@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { QuestionRepository } from './QuestionRepository';
 import { Character, Experience, experienceLevels } from './character';
 import { ZodJsonUnmarshaler } from './json/ZodJsonUnmarshaler';
+import { ErrorAware } from './types/returnTypes';
 
 const estimatedBudgetAnswerSchema = z.object({
     armour: z.number(),
@@ -30,17 +31,10 @@ type BudgetAmounts = z.infer<typeof estimatedBudgetAnswerSchema>;
 
 export type EstimatedBudget = BudgetAmounts & { salary: number; max_budget: number };
 
-export interface EstimateBudgetError {
-    error: string;
-    answer: string;
-}
-
-export type EstimateBudgetResponse = EstimatedBudget | EstimateBudgetError;
-
 export class BudgetEstimator {
     constructor(private readonly questionRepository: QuestionRepository) {}
 
-    public async estimateBudget(character: Character): Promise<EstimateBudgetResponse> {
+    public async estimateBudget(character: Character): Promise<ErrorAware<EstimatedBudget>> {
         const name = `${character.first_name} ${character.surname}`;
         const characteristics = Object.entries(character.characteristics)
             .map(([key, value]) => `${key}: ${value}`)
@@ -71,7 +65,7 @@ export class BudgetEstimator {
         const budgetSuggestion = await this.questionRepository.ask<BudgetAmounts>(systemPrompt, question, estimatedBudgetAnswerUnmarshaler);
 
         if ('error' in budgetSuggestion) {
-            return { error: budgetSuggestion.error, answer: budgetSuggestion.context ?? '' };
+            return { error: budgetSuggestion.error, context: budgetSuggestion.context };
         }
 
         return { ...budgetSuggestion, salary, max_budget: maxBudget };
