@@ -1,5 +1,6 @@
 import { Ai, AiModels } from '@cloudflare/workers-types';
 import { stripIndent } from 'common-tags';
+
 import { AskOptions, QuestionRepository } from '../QuestionRepository';
 import { JsonUnmarshaler } from '../json/JsonUnmarshaler';
 import { ErrorAware } from '../types/returnTypes';
@@ -13,7 +14,7 @@ export class CloudflareQuestionRepository implements QuestionRepository {
         systemPrompt: string,
         question: string,
         unmarshaler: JsonUnmarshaler<T>,
-        { additionalContext }: AskOptions = {}
+        { additionalContext }: AskOptions = {},
     ): Promise<ErrorAware<T>> {
         const typeConstrainedQuestion = stripIndent`${question}
         Answer in JSON format, don't explain the answer:

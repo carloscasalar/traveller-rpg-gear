@@ -1,5 +1,5 @@
-import { ErrorAware } from './types/returnTypes';
 import { JsonUnmarshaler } from './json/JsonUnmarshaler';
+import { ErrorAware } from './types/returnTypes';
 
 export interface AskOptions {
     additionalContext?: string;
@@ -9,7 +9,7 @@ export interface QuestionRepository {
         systemPrompt: string,
         question: string,
         unmarshaler: JsonUnmarshaler<T>,
-        options?: AskOptions
+        options?: AskOptions,
     ): Promise<ErrorAware<T>>;
     askWithoutContext(question: string): Promise<string>;
     translateQuestionToEmbeddings(query: string): Promise<number[]>;

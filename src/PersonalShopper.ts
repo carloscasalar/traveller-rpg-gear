@@ -1,10 +1,11 @@
 import { stripIndent } from 'common-tags';
 import { z } from 'zod';
-import { Character, experienceLevels } from './character';
+
 import { Equipment, EquipmentCriteria, EquipmentRepository, SectionsCriteria } from './EquipmentRepository';
 import { QuestionRepository } from './QuestionRepository';
-import { creditsFromCrFormat } from './price';
+import { Character, experienceLevels } from './character';
 import { ZodJsonUnmarshaler } from './json/ZodJsonUnmarshaler';
+import { creditsFromCrFormat } from './price';
 import { ErrorAware } from './types/returnTypes';
 
 export interface SuggestionError {
@@ -38,11 +39,14 @@ const questionEquipmentUnmarshaler = new ZodJsonUnmarshaler(
         itemIds: []string,
         reasoning?: string
     }
-    `
+    `,
 );
 
 export class PersonalShopper {
-    constructor(private readonly equipmentRepository: EquipmentRepository, private readonly questionRepository: QuestionRepository) {}
+    constructor(
+        private readonly equipmentRepository: EquipmentRepository,
+        private readonly questionRepository: QuestionRepository,
+    ) {}
     public async suggestArmour(character: Character, budget: number): Promise<SingleSuggestion<ArmourSuggestion>> {
         const suitableAmours = await this.getAvailableArmours(character, budget);
         if (suitableAmours.length === 0) {
@@ -122,13 +126,13 @@ export class PersonalShopper {
         character: Character,
         whatDoIWant: string,
         itemsAvailable: Equipment[],
-        budget: number
+        budget: number,
     ): Promise<ErrorAware<Equipment[]>> {
         const additionalShoppingContext = stripIndent`These are the available items in format "id: name [section/subsection] [tl] [price in credits] [weight in kg] [skill requirement if any]:
         ${itemsAvailable
             .map(
                 (i) =>
-                    `${i.id}: ${i.name} [${i.section}/${i.subsection}] [${i.tl}] [${creditsFromCrFormat(i.price)}] [${i.mass}] [${i.skill}]`
+                    `${i.id}: ${i.name} [${i.section}/${i.subsection}] [${i.tl}] [${creditsFromCrFormat(i.price)}] [${i.mass}] [${i.skill}]`,
             )
             .join('\n')}
         `;
@@ -161,7 +165,7 @@ export class PersonalShopper {
             questionEquipmentUnmarshaler,
             {
                 additionalContext: additionalShoppingContext,
-            }
+            },
         );
 
         if ('error' in itemsSuggestion) {

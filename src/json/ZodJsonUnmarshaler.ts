@@ -1,9 +1,13 @@
 import { z } from 'zod';
-import { JsonUnmarshaler } from './JsonUnmarshaler';
+
 import { ErrorAware } from '../types/returnTypes';
+import { JsonUnmarshaler } from './JsonUnmarshaler';
 
 export class ZodJsonUnmarshaler<T> implements JsonUnmarshaler<T> {
-    constructor(private readonly schema: z.ZodType<T>, private readonly serializedSchema: string) {}
+    constructor(
+        private readonly schema: z.ZodType<T>,
+        private readonly serializedSchema: string,
+    ) {}
     unmarshal(data: string): ErrorAware<T> {
         let parsedData;
         try {

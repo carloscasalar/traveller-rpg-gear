@@ -10,7 +10,8 @@
     "test:unit": "vitest --config ./vitest.config.unit.mts",
     "test:workers": "vitest --config ./vitest.config.workers.mts",
     "cf-typegen": "wrangler types",
-    "check": "tsc --noEmit"
+    "check": "tsc --noEmit",
+    "format": "prettier --write \"src/**/*.ts\""
   },
   "dependencies": {
     "common-tags": "1.8.2",
@@ -20,7 +21,9 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.5.40",
     "@cloudflare/workers-types": "4.20241230.0",
+    "@trivago/prettier-plugin-sort-imports": "5.2.1",
     "@types/common-tags": "1.8.4",
+    "prettier": "3.4.2",
     "typescript": "5.5.2",
     "vitest": "2.1.8",
     "wrangler": "3.99.0"

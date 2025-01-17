@@ -1,9 +1,10 @@
-import { creditsFromCrFormat } from './../price';
 import { D1Database, VectorizeIndex } from '@cloudflare/workers-types';
 import { stripIndents } from 'common-tags';
+
 import { Equipment, EquipmentCriteria, EquipmentRepository } from '../EquipmentRepository';
 import { QuestionRepository } from '../QuestionRepository';
 import { toCrFormat } from '../price';
+import { creditsFromCrFormat } from './../price';
 
 interface EquipmentMetadata {
     name: string;
@@ -25,7 +26,7 @@ export class CloudflareEquipmentRepository implements EquipmentRepository {
     constructor(
         private readonly db: D1Database,
         private readonly vectorize: VectorizeIndex,
-        private readonly questionRepository: QuestionRepository
+        private readonly questionRepository: QuestionRepository,
     ) {}
 
     public async findByCriteria(criteria: EquipmentCriteria, additionalContext: string | null, maxResults: number): Promise<Equipment[]> {

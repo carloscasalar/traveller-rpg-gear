@@ -35,9 +35,9 @@ const sections = [
 ] as const;
 export type Section = (typeof sections)[number];
 
-export interface ListOfSectionsSubsectionCriteria{
+export interface ListOfSectionsSubsectionCriteria {
     type: 'sections-subsection';
-    sections: {section: Section, subsection: string}[];
+    sections: { section: Section; subsection: string }[];
 }
 
 export interface ListOfSectionsCriteria {

@@ -1,7 +1,8 @@
 import { stripIndents } from 'common-tags';
-import { Character, Experience, experienceLevels } from './character';
-import { QuestionRepository } from './QuestionRepository';
 import { z } from 'zod';
+
+import { QuestionRepository } from './QuestionRepository';
+import { Character, Experience, experienceLevels } from './character';
 import { ZodJsonUnmarshaler } from './json/ZodJsonUnmarshaler';
 
 const estimatedBudgetAnswerSchema = z.object({
@@ -22,7 +23,7 @@ const estimatedBudgetAnswerUnmarshaler = new ZodJsonUnmarshaler(
         commodities: number;
         reasoning: string;
     }
-    `
+    `,
 );
 
 type BudgetAmounts = z.infer<typeof estimatedBudgetAnswerSchema>;

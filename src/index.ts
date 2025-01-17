@@ -10,15 +10,16 @@
  *
  * Learn more at https://developers.cloudflare.com/workers/
  */
-import { Context, Hono } from 'hono';
 import { stripIndents } from 'common-tags';
-import { Character } from './character';
-import { Env } from './env';
-import { CloudflareQuestionRepository } from './cloudflare/CloudflareQuestionRepository';
+import { Context, Hono } from 'hono';
+
 import { BudgetEstimator } from './BudgetEstimator';
 import { Equipment } from './EquipmentRepository';
-import { CloudflareEquipmentRepository } from './cloudflare/CloudflareEquipmentRepository';
 import { PersonalShopper } from './PersonalShopper';
+import { Character } from './character';
+import { CloudflareEquipmentRepository } from './cloudflare/CloudflareEquipmentRepository';
+import { CloudflareQuestionRepository } from './cloudflare/CloudflareQuestionRepository';
+import { Env } from './env';
 
 const app = new Hono<{ Bindings: Env }>();
 
