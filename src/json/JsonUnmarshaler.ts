@@ -1,4 +1,3 @@
-import { describe } from 'vitest';
 import { ErrorAware } from '../types/returnTypes';
 
 export interface JsonUnmarshaler<T> {

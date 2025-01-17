@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
 import { ZodJsonUnmarshaler } from './ZodJsonUnmarshaler';
-import { stripIndent } from 'common-tags';
 
 describe('ZodJsonUnmarshaler', () => {
     const schema = z.object({
