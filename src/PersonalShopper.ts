@@ -6,24 +6,12 @@ import { QuestionRepository } from './QuestionRepository';
 import { Character, experienceLevels } from './character';
 import { ZodJsonUnmarshaler } from './json/ZodJsonUnmarshaler';
 import { creditsFromCrFormat } from './price';
-import { ErrorAware } from './types/returnTypes';
-
-export interface SuggestionError {
-    error: string;
-    answer: string;
-}
+import { ErrorAware, SearchResult } from './types/returnTypes';
 
 export interface ArmourSuggestion {
-    found: true;
     armour: Equipment;
     augments: Equipment[];
 }
-
-export interface NoSuggestionFound {
-    found: false;
-}
-
-export type SingleSuggestion<SuggestedEntity> = SuggestedEntity | NoSuggestionFound | SuggestionError;
 
 const queryEquipmentIdsSchema = z.object({
     itemIds: z.array(z.string()),
@@ -47,7 +35,7 @@ export class PersonalShopper {
         private readonly equipmentRepository: EquipmentRepository,
         private readonly questionRepository: QuestionRepository,
     ) {}
-    public async suggestArmour(character: Character, budget: number): Promise<SingleSuggestion<ArmourSuggestion>> {
+    public async suggestArmour(character: Character, budget: number): Promise<SearchResult<ArmourSuggestion>> {
         const suitableAmours = await this.getAvailableArmours(character, budget);
         if (suitableAmours.length === 0) {
             return { found: false };
@@ -70,8 +58,10 @@ export class PersonalShopper {
         if (suitableAugments.length === 0) {
             return {
                 found: true,
-                armour,
-                augments: [],
+                result: {
+                    armour,
+                    augments: [],
+                },
             };
         }
 
@@ -80,13 +70,15 @@ export class PersonalShopper {
         if ('error' in augmentsSuggestions) {
             this.logError(`Error suggesting augments: ${augmentsSuggestions.error}`);
             this.log('raw augments suggestion:', augmentsSuggestions.context);
-            return { found: true, armour, augments: [] };
+            return { found: true, result: { armour, augments: [] } };
         }
 
         return {
             found: true,
-            armour,
-            augments: augmentsSuggestions,
+            result: {
+                armour,
+                augments: augmentsSuggestions,
+            },
         };
     }
 
