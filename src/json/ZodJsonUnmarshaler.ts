@@ -1,10 +1,9 @@
 import { z } from 'zod';
-import { printNode, zodToTs } from 'zod-to-ts';
 import { JsonUnmarshaler } from './JsonUnmarshaler';
 import { ErrorAware } from '../types/returnTypes';
 
 export class ZodJsonUnmarshaler<T> implements JsonUnmarshaler<T> {
-    constructor(private readonly schema: z.ZodType<T>) {}
+    constructor(private readonly schema: z.ZodType<T>, private readonly serializedSchema: string) {}
     unmarshal(data: string): ErrorAware<T> {
         let parsedData;
         try {
@@ -22,7 +21,6 @@ export class ZodJsonUnmarshaler<T> implements JsonUnmarshaler<T> {
     }
 
     serializeSchema(): string {
-        const { node } = zodToTs(this.schema, 'type');
-        return printNode(node);
+        return this.serializedSchema;
     }
 }

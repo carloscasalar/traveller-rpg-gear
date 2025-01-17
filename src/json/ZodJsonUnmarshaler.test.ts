@@ -8,7 +8,7 @@ describe('ZodJsonUnmarshaler', () => {
         age: z.number(),
     });
 
-    const unmarshaler = new ZodJsonUnmarshaler(schema);
+    const unmarshaler = new ZodJsonUnmarshaler(schema, '{\n    name: string;\n    age: number;\n}');
 
     it('should unmarshal valid JSON string successfully', () => {
         const jsonString = JSON.stringify({ name: 'John', age: 30 });
@@ -29,7 +29,7 @@ describe('ZodJsonUnmarshaler', () => {
     });
 
     it('should serialize schema to TypeScript', () => {
-        const expected = "{\n    name: string;\n    age: number;\n}";
+        const expected = '{\n    name: string;\n    age: number;\n}';
         const result = unmarshaler.serializeSchema();
         expect(result).toEqual(expected);
     });
