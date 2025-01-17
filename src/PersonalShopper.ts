@@ -1,7 +1,7 @@
 import { stripIndent } from 'common-tags';
 import { z } from 'zod';
 
-import { Equipment, EquipmentCriteria, EquipmentRepository, SectionsCriteria } from './EquipmentRepository';
+import { Equipment, EquipmentCriteria, EquipmentRepository } from './EquipmentRepository';
 import { QuestionRepository } from './QuestionRepository';
 import { Character, experienceLevels } from './character';
 import { ZodJsonUnmarshaler } from './json/ZodJsonUnmarshaler';
