@@ -25,9 +25,8 @@ jobs:
     - name: Install dependencies
       run: npm install
 
-    # Disabled until having proper tests
-    # - name: Run tests
-    #   run: npm test
+    - name: Run unit tests
+      run: npm run test:unit
 
     - name: Check types
       run: npm run check

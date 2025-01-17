@@ -6,7 +6,9 @@
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",
     "start": "wrangler dev",
-    "test": "vitest",
+    "test": "npm run test:unit",
+    "test:unit": "vitest --config ./vitest.config.unit.mts",
+    "test:workers": "vitest --config ./vitest.config.workers.mts",
     "cf-typegen": "wrangler types",
     "check": "tsc --noEmit"
   },
