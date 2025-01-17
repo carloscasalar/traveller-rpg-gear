@@ -3,22 +3,8 @@ import { stripIndents } from 'common-tags';
 
 import { Equipment, EquipmentCriteria, EquipmentRepository } from '../EquipmentRepository';
 import { QuestionRepository } from '../QuestionRepository';
-import { toCrFormat } from '../price';
+import { ErrorAware } from '../types/returnTypes';
 import { creditsFromCrFormat } from './../price';
-
-interface EquipmentMetadata {
-    name: string;
-    section: string;
-    subsection: string;
-    tl: number;
-    mass: number;
-    price: number;
-    species: string;
-    skill: string;
-    law: string;
-    notes: string;
-    mod: string;
-}
 
 const GOOD_ENOUGH_SCORE_THRESHOLD = 0.7;
 
@@ -29,7 +15,11 @@ export class CloudflareEquipmentRepository implements EquipmentRepository {
         private readonly questionRepository: QuestionRepository,
     ) {}
 
-    public async findByCriteria(criteria: EquipmentCriteria, additionalContext: string | null, maxResults: number): Promise<Equipment[]> {
+    public async findByCriteria(
+        criteria: EquipmentCriteria,
+        additionalContext: string | null,
+        maxResults: number,
+    ): Promise<ErrorAware<Equipment[]>> {
         const getSectionsFilter = (criteria: EquipmentCriteria) => {
             if (criteria.sections.type === 'sections') {
                 return `section should be one of ${criteria.sections.sections.join(', ')}.`;

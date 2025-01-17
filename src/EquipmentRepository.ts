@@ -1,3 +1,5 @@
+import { ErrorAware } from './types/returnTypes';
+
 export interface Equipment {
     id: string;
     section: Section;
@@ -54,5 +56,5 @@ export interface EquipmentCriteria {
 }
 
 export interface EquipmentRepository {
-    findByCriteria(criteria: EquipmentCriteria, additionalContext: string, maxResults: number): Promise<Equipment[]>;
+    findByCriteria(criteria: EquipmentCriteria, additionalContext: string, maxResults: number): Promise<ErrorAware<Equipment[]>>;
 }

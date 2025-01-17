@@ -37,7 +37,7 @@ export class PersonalShopper {
     ) {}
     public async suggestArmour(character: Character, budget: number): Promise<SearchResult<ArmourSuggestion>> {
         const suitableAmours = await this.getAvailableArmours(character, budget);
-        if (suitableAmours.length === 0) {
+        if ('error' in suitableAmours || suitableAmours.length === 0) {
             return { found: false };
         }
 
@@ -55,7 +55,7 @@ export class PersonalShopper {
         const armour = armourSuggestions[0];
         const remainingBudget = budget - creditsFromCrFormat(armour.price);
         const suitableAugments = await this.getAvailableAugments(character, remainingBudget);
-        if (suitableAugments.length === 0) {
+        if ('error' in suitableAugments || suitableAugments.length === 0) {
             return {
                 found: true,
                 result: {
@@ -82,7 +82,7 @@ export class PersonalShopper {
         };
     }
 
-    private async getAvailableArmours(character: Character, budget: number): Promise<Equipment[]> {
+    private async getAvailableArmours(character: Character, budget: number): Promise<ErrorAware<Equipment[]>> {
         const armourCriteria: EquipmentCriteria = {
             sections: {
                 type: 'sections',
@@ -96,7 +96,7 @@ export class PersonalShopper {
         return this.equipmentRepository.findByCriteria(armourCriteria, additionalArmourContext, 30);
     }
 
-    private async getAvailableAugments(character: Character, budget: number): Promise<Equipment[]> {
+    private async getAvailableAugments(character: Character, budget: number): Promise<ErrorAware<Equipment[]>> {
         const armourCriteria: EquipmentCriteria = {
             sections: {
                 type: 'sections-subsection',
