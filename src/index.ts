@@ -10,7 +10,6 @@
  *
  * Learn more at https://developers.cloudflare.com/workers/
  */
-import { AiTextGenerationOutput } from '@cloudflare/workers-types';
 import { Context, Hono } from 'hono';
 import { stripIndents } from 'common-tags';
 import { Character } from './character';
@@ -133,7 +132,7 @@ app.post('api/v1/equipment', async (c) => {
         itemIds = vectorQuery.matches.map((match) => match.id);
         console.log(
             'scores',
-            vectorQuery.matches.map((match) => match.score)
+            vectorQuery.matches.map((match) => match.score),
         );
     }
 
@@ -144,7 +143,7 @@ app.post('api/v1/equipment', async (c) => {
         const { results } = await c.env.DB.prepare(query).bind(allIds).all<Equipment>();
         if (results)
             equipmentList = results.map(
-                (e) => `${e.name}, TL: ${e.tl}, Price: ${e.price}, Law: ${e.law}, Mass: ${e.mass}, Skill: ${e.skill}, Notes: ${e.notes}`
+                (e) => `${e.name}, TL: ${e.tl}, Price: ${e.price}, Law: ${e.law}, Mass: ${e.mass}, Skill: ${e.skill}, Notes: ${e.notes}`,
             );
     } else {
         console.log('***** No equipment suggestions found');
