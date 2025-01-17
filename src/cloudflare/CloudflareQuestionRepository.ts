@@ -1,12 +1,12 @@
 import { Ai, AiModels } from '@cloudflare/workers-types';
-import { QuestionRepository } from '../QuestionRepository';
+import { AskOptions, QuestionRepository } from '../QuestionRepository';
 
 const questionModel: keyof AiModels = '@cf/meta/llama-3.1-8b-instruct-awq';
 const to768EmbeddingsModel: keyof AiModels = '@cf/baai/bge-base-en-v1.5';
 export class CloudflareQuestionRepository implements QuestionRepository {
     constructor(private readonly ai: Ai) {}
 
-    async ask(systemPrompt: string, question: string, additionalContext?: string): Promise<string> {
+    async ask(systemPrompt: string, question: string, { additionalContext }: AskOptions = {}): Promise<string> {
         const result = await this.ai.run(questionModel, {
             messages: [
                 ...(additionalContext ? [{ role: 'system', content: additionalContext }] : []),

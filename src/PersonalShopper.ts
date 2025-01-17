@@ -149,7 +149,9 @@ export class PersonalShopper {
             }
         `;
 
-        const rawItemsSuggestion = await this.questionRepository.ask(systemMessage, `${whoAmI}${question}`, additionalShoppingContext);
+        const rawItemsSuggestion = await this.questionRepository.ask(systemMessage, `${whoAmI}${question}`, {
+            additionalContext: additionalShoppingContext,
+        });
         let itemsSuggestion;
         try {
             const parsedAnswer = JSON.parse(rawItemsSuggestion);
