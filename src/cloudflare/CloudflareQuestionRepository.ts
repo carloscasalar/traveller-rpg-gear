@@ -9,23 +9,7 @@ const to768EmbeddingsModel: keyof AiModels = '@cf/baai/bge-base-en-v1.5';
 export class CloudflareQuestionRepository implements QuestionRepository {
     constructor(private readonly ai: Ai) {}
 
-    async ask(systemPrompt: string, question: string, { additionalContext }: AskOptions = {}): Promise<string> {
-        const result = await this.ai.run(questionModel, {
-            messages: [
-                ...(additionalContext ? [{ role: 'system', content: additionalContext }] : []),
-                { role: 'system', content: systemPrompt },
-                { role: 'user', content: question },
-            ],
-        });
-
-        if ('response' in result) {
-            return result.response || '';
-        }
-
-        throw new Error(`unable get response from model: ${questionModel}`);
-    }
-
-    async askTyped<T extends object>(
+    async ask<T extends object>(
         systemPrompt: string,
         question: string,
         unmarshaler: JsonUnmarshaler<T>,
@@ -46,7 +30,7 @@ export class CloudflareQuestionRepository implements QuestionRepository {
         });
 
         if (!('response' in result) || result.response === undefined) {
-            return {error: `unable get response from model ${questionModel}`};
+            return { error: `unable get response from model ${questionModel}` };
         }
 
         const unmarshaledResponse = unmarshaler.unmarshal(result.response!);

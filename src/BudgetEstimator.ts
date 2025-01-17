@@ -67,11 +67,7 @@ export class BudgetEstimator {
 			The output must be in JSON format as it will be used by the system to return the result in a REST API.
 		`;
 
-        const budgetSuggestion = await this.questionRepository.askTyped<BudgetAmounts>(
-            systemPrompt,
-            question,
-            estimatedBudgetAnswerUnmarshaler
-        );
+        const budgetSuggestion = await this.questionRepository.ask<BudgetAmounts>(systemPrompt, question, estimatedBudgetAnswerUnmarshaler);
 
         if ('error' in budgetSuggestion) {
             return { error: budgetSuggestion.error, answer: budgetSuggestion.context ?? '' };

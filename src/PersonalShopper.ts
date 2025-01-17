@@ -155,9 +155,14 @@ export class PersonalShopper {
             My budget is ${budget} Credits and I cannot exceed it.
         `;
 
-        const itemsSuggestion = await this.questionRepository.askTyped<QueryEquipmentIds>(systemMessage, `${whoAmI}${whatDoIWant}`, questionEquipmentUnmarshaler, {
-            additionalContext: additionalShoppingContext,
-        });
+        const itemsSuggestion = await this.questionRepository.ask<QueryEquipmentIds>(
+            systemMessage,
+            `${whoAmI}${whatDoIWant}`,
+            questionEquipmentUnmarshaler,
+            {
+                additionalContext: additionalShoppingContext,
+            }
+        );
 
         if ('error' in itemsSuggestion) {
             return { error: itemsSuggestion.error, context: itemsSuggestion.context };
