@@ -57,24 +57,26 @@ app.post('api/v1/equipment/wip', async (c) => {
     const budgetEstimator = new BudgetEstimator(questionRepository);
     const budget = await budgetEstimator.estimateBudget(character);
     if ('error' in budget) {
-        return c.json({error: 'unable to estimate, please try again', message: budget.answer}, 500);
+        return c.json({ error: 'unable to estimate, please try again', message: budget.answer }, 500);
     }
 
     // For each budget category (armour, weapons, tools, commodities) ask the personal shopper for suggestions
     const equipmentRepository = new CloudflareEquipmentRepository(c.env.DB, c.env.VECTORIZE, questionRepository);
     const personalShopper = new PersonalShopper(equipmentRepository, questionRepository);
 
-    const armourSuggestion = await personalShopper.suggestArmour(character, budget.armour)
+    const armourSuggestion = await personalShopper.suggestArmour(character, budget.armour);
     if ('error' in armourSuggestion) {
-        return c.json({error: 'unable to suggest armour, please try again', message: armourSuggestion.answer}, 500);
+        return c.json({ error: 'unable to suggest armour, please try again', message: armourSuggestion.answer }, 500);
     }
     if (!armourSuggestion.found) {
-        return c.json({armour: null});
+        return c.json({ armour: null });
     }
-    const armourDescription = stripIndents`${armourSuggestion.armour.name} (TL ${armourSuggestion.armour.tl}) ${armourSuggestion.armour.price}
-    ${armourSuggestion.augments.length ? '- Augments: ' + armourSuggestion.augments.map(a => a.name).join(', ') : ''}`;
+    const armourDescription = stripIndents`${armourSuggestion.armour.name} (TL ${armourSuggestion.armour.tl}) ${
+        armourSuggestion.armour.price
+    }
+    ${armourSuggestion.augments.length ? '- Augments: ' + armourSuggestion.augments.map((a) => a.name).join(', ') : ''}`;
 
-    return c.json({armour: armourDescription, budget});
+    return c.json({ armour: armourDescription, budget });
 });
 
 app.post('api/v1/equipment', async (c) => {
@@ -166,7 +168,7 @@ app.post('api/v1/equipment', async (c) => {
         ],
     });
 
-    if( 'response' in result ) {
+    if ('response' in result) {
         return c.json(result.response);
     }
 
