@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { z } from 'zod';
 import { ZodJsonUnmarshaler } from './ZodJsonUnmarshaler';
+import { stripIndent } from 'common-tags';
 
 describe('ZodJsonUnmarshaler', () => {
     const schema = z.object({
@@ -26,5 +27,11 @@ describe('ZodJsonUnmarshaler', () => {
         const invalidJsonString = JSON.stringify({ name: 'John', age: 'thirty' });
         const result = unmarshaler.unmarshal(invalidJsonString);
         expect(result).toEqual({ error: expect.stringContaining("JSON object doesn't meet expected format") });
+    });
+
+    it('should serialize schema to TypeScript', () => {
+        const expected = "{\n    name: string;\n    age: number;\n}";
+        const result = unmarshaler.serializeSchema();
+        expect(result).toEqual(expected);
     });
 });

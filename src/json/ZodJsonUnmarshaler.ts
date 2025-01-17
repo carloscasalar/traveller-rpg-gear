@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { printNode, zodToTs } from 'zod-to-ts';
 import { JsonUnmarshaler } from './JsonUnmarshaler';
 import { ErrorAware } from '../types/returnTypes';
 
@@ -18,5 +19,10 @@ export class ZodJsonUnmarshaler<T> implements JsonUnmarshaler<T> {
         }
 
         return unmarshalingResult.data;
+    }
+
+    serializeSchema(): string {
+        const { node } = zodToTs(this.schema, 'type');
+        return printNode(node);
     }
 }
