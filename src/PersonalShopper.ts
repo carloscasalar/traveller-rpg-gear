@@ -40,7 +40,7 @@ export class PersonalShopper {
         if ('error' in armourSuggestions) {
             this.logError(`Error suggesting armour: ${armourSuggestions.error}`);
             this.log('raw armour suggestion:', armourSuggestions.answer);
-            return {found: false};
+            return { found: false };
         }
 
         if (armourSuggestions.length > 1) {
@@ -62,7 +62,7 @@ export class PersonalShopper {
         if ('error' in augmentsSuggestions) {
             this.logError(`Error suggesting augments: ${augmentsSuggestions.error}`);
             this.log('raw augments suggestion:', augmentsSuggestions.answer);
-            return {found: true, armour, augments: []};
+            return { found: true, armour, augments: [] };
         }
 
         return {
@@ -104,9 +104,19 @@ export class PersonalShopper {
         return this.equipmentRepository.findByCriteria(armourCriteria, additionalArmourContext, 30);
     }
 
-    private async suggestEquipment(character: Character, whatDoIWant: string, itemsAvailable: Equipment[], budget: number): Promise<Equipment[]|SuggestionError> {
+    private async suggestEquipment(
+        character: Character,
+        whatDoIWant: string,
+        itemsAvailable: Equipment[],
+        budget: number
+    ): Promise<Equipment[] | SuggestionError> {
         const additionalShoppingContext = stripIndent`These are the available items in format "id: name [section/subsection] [tl] [price in credits] [weight in kg] [skill requirement if any]:
-        ${itemsAvailable.map((i) => `${i.id}: ${i.name} [${i.section}/${i.subsection}] [${i.tl}] [${creditsFromCrFormat(i.price)}] [${i.mass}] [${i.skill}]`).join('\n')}
+        ${itemsAvailable
+            .map(
+                (i) =>
+                    `${i.id}: ${i.name} [${i.section}/${i.subsection}] [${i.tl}] [${creditsFromCrFormat(i.price)}] [${i.mass}] [${i.skill}]`
+            )
+            .join('\n')}
         `;
         this.log('shopping context:', additionalShoppingContext);
 
@@ -125,8 +135,8 @@ export class PersonalShopper {
             My skills are ${character.skills.join(', ')}.
 
             My characteristics are ${Object.entries(character.characteristics)
-            .map(([key, value]) => `${key}: ${value}`)
-            .join(', ')}
+                .map(([key, value]) => `${key}: ${value}`)
+                .join(', ')}
 
             My budget is ${budget} Credits and I cannot exceed it.
         `;

@@ -72,14 +72,14 @@ export class CloudflareEquipmentRepository implements EquipmentRepository {
         const { results } = await this.db.prepare(dbQuery).bind(allIds).all<Equipment>();
 
         // Because of these are only the best scored items, they can exceed some of the criteria
-        const meetsPriceCriteria = (e: Equipment) => (criteria.maxPrice == undefined || creditsFromCrFormat(e.price) <= criteria.maxPrice!);
-        const meetsTLCriteria = (e: Equipment) => (criteria.maxTL == undefined || e.tl <= criteria.maxTL!);
+        const meetsPriceCriteria = (e: Equipment) => criteria.maxPrice == undefined || creditsFromCrFormat(e.price) <= criteria.maxPrice!;
+        const meetsTLCriteria = (e: Equipment) => criteria.maxTL == undefined || e.tl <= criteria.maxTL!;
         const meetsSectionsCriteria = (e: Equipment) => {
             if (criteria.sections.type === 'sections') {
                 return criteria.sections.sections.includes(e.section);
             }
             return criteria.sections.sections.some((s) => s.section === e.section && s.subsection === e.subsection);
-        }
+        };
         const items = results.filter((e) => meetsPriceCriteria(e) && meetsTLCriteria(e) && meetsSectionsCriteria(e));
         return items;
     }
