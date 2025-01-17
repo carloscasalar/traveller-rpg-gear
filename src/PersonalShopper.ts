@@ -4,6 +4,8 @@ import { Character, experienceLevels } from './character';
 import { Equipment, EquipmentCriteria, EquipmentRepository, SectionsCriteria } from './EquipmentRepository';
 import { QuestionRepository } from './QuestionRepository';
 import { creditsFromCrFormat } from './price';
+import { ZodJsonUnmarshaler } from './json/ZodJsonUnmarshaler';
+import { ErrorAware } from './types/returnTypes';
 
 export interface SuggestionError {
     error: string;
@@ -27,6 +29,18 @@ const queryEquipmentIdsSchema = z.object({
     reasoning: z.string().optional(),
 });
 
+type QueryEquipmentIds = z.infer<typeof queryEquipmentIdsSchema>;
+
+const questionEquipmentUnmarshaler = new ZodJsonUnmarshaler(
+    queryEquipmentIdsSchema,
+    stripIndent`
+    {
+        itemIds: []string,
+        reasoning?: string
+    }
+    `
+);
+
 export class PersonalShopper {
     constructor(private readonly equipmentRepository: EquipmentRepository, private readonly questionRepository: QuestionRepository) {}
     public async suggestArmour(character: Character, budget: number): Promise<SingleSuggestion<ArmourSuggestion>> {
@@ -39,7 +53,7 @@ export class PersonalShopper {
         const armourSuggestions = await this.suggestEquipment(character, whatDoIWant, suitableAmours, budget);
         if ('error' in armourSuggestions) {
             this.logError(`Error suggesting armour: ${armourSuggestions.error}`);
-            this.log('raw armour suggestion:', armourSuggestions.answer);
+            this.log('raw armour suggestion:', armourSuggestions.context);
             return { found: false };
         }
 
@@ -61,7 +75,7 @@ export class PersonalShopper {
         const augmentsSuggestions = await this.suggestEquipment(character, whatDoIWantAugments, suitableAugments, remainingBudget);
         if ('error' in augmentsSuggestions) {
             this.logError(`Error suggesting augments: ${augmentsSuggestions.error}`);
-            this.log('raw augments suggestion:', augmentsSuggestions.answer);
+            this.log('raw augments suggestion:', augmentsSuggestions.context);
             return { found: true, armour, augments: [] };
         }
 
@@ -109,7 +123,7 @@ export class PersonalShopper {
         whatDoIWant: string,
         itemsAvailable: Equipment[],
         budget: number
-    ): Promise<Equipment[] | SuggestionError> {
+    ): Promise<ErrorAware<Equipment[]>> {
         const additionalShoppingContext = stripIndent`These are the available items in format "id: name [section/subsection] [tl] [price in credits] [weight in kg] [skill requirement if any]:
         ${itemsAvailable
             .map(
@@ -141,32 +155,18 @@ export class PersonalShopper {
             My budget is ${budget} Credits and I cannot exceed it.
         `;
 
-        const question = stripIndent`${whatDoIWant}
-        Answer in JSON format, don't explain the answer:
-            {
-                itemIds: string[],
-                reasoning?: string
-            }
-        `;
-
-        const rawItemsSuggestion = await this.questionRepository.ask(systemMessage, `${whoAmI}${question}`, {
+        const itemsSuggestion = await this.questionRepository.askTyped<QueryEquipmentIds>(systemMessage, `${whoAmI}${whatDoIWant}`, questionEquipmentUnmarshaler, {
             additionalContext: additionalShoppingContext,
         });
-        let itemsSuggestion;
-        try {
-            const parsedAnswer = JSON.parse(rawItemsSuggestion);
-            itemsSuggestion = queryEquipmentIdsSchema.safeParse(parsedAnswer);
-            if (!itemsSuggestion.success) {
-                return { error: 'Unexpected answer response shape', answer: rawItemsSuggestion };
-            }
-        } catch (e) {
-            return { error: 'Error parsing items answer response', answer: rawItemsSuggestion };
+
+        if ('error' in itemsSuggestion) {
+            return { error: itemsSuggestion.error, context: itemsSuggestion.context };
         }
 
-        return itemsSuggestion.data.itemIds.reduce((acc: Equipment[], itemId) => {
+        return itemsSuggestion.itemIds.reduce((acc: Equipment[], itemId) => {
             const item = itemsAvailable.find((i) => i.id === itemId);
             if (!item) {
-                this.logError(`Item ID suggested does not exists ${itemId} [${itemsSuggestion.data.reasoning}]`);
+                this.logError(`Item ID suggested does not exists ${itemId} [${itemsSuggestion.reasoning}]`);
                 return acc;
             }
             return [...acc, item];

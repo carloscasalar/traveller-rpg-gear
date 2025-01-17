@@ -35,6 +35,7 @@ export class CloudflareQuestionRepository implements QuestionRepository {
         Answer in JSON format, don't explain the answer:
         ${unmarshaler.serializeSchema()}
         `;
+        this.log('typeConstrainedQuestion: ', typeConstrainedQuestion);
 
         const result = await this.ai.run(questionModel, {
             messages: [
