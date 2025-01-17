@@ -1,16 +1,33 @@
 import { stripIndents } from 'common-tags';
 import { Character, Experience, experienceLevels } from './character';
 import { QuestionRepository } from './QuestionRepository';
+import { z } from 'zod';
+import { ZodJsonUnmarshaler } from './json/ZodJsonUnmarshaler';
 
-export interface EstimatedBudget {
-    salary: number;
-    max_budget: number;
-    armour: number;
-    weapons: number;
-    tools: number;
-    commodities: number;
-    reasoning: string;
-}
+const estimatedBudgetAnswerSchema = z.object({
+    armour: z.number(),
+    weapons: z.number(),
+    tools: z.number(),
+    commodities: z.number(),
+    reasoning: z.string().optional(),
+});
+
+const estimatedBudgetAnswerUnmarshaler = new ZodJsonUnmarshaler(
+    estimatedBudgetAnswerSchema,
+    `
+    {
+        armour: number;
+        weapons: number;
+        tools: number;
+        commodities: number;
+        reasoning: string;
+    }
+    `
+);
+
+type BudgetAmounts = z.infer<typeof estimatedBudgetAnswerSchema>;
+
+export type EstimatedBudget = BudgetAmounts & { salary: number; max_budget: number };
 
 export interface EstimateBudgetError {
     error: string;
@@ -43,15 +60,6 @@ export class BudgetEstimator {
 			${name} current monthly salary is ${salary} Cr and the max budget for equipment based on her/his savings along his working life is ${maxBudget} Cr.
 
 			Taking into account the profession of ${name}, suggest a budget for equipment distributed in several categories: armour, weapons, tools and commodities.
-			Provide the response in JSON format, numbers are expressed as credits. Use this format:
-			{
-				"armour": number,
-				"weapons": number,
-				"tools": number,
-				"commodities": number,
-				"reasoning": string
-			}
-			DON'T explain the answer, just provide the budget JSON object.
 		`;
 
         const systemPrompt = stripIndents`
@@ -59,17 +67,20 @@ export class BudgetEstimator {
 			The output must be in JSON format as it will be used by the system to return the result in a REST API.
 		`;
 
-        const answer = await this.questionRepository.ask(systemPrompt, question);
+        const budgetSuggestion = await this.questionRepository.askTyped<BudgetAmounts>(
+            systemPrompt,
+            question,
+            estimatedBudgetAnswerUnmarshaler
+        );
 
-        try {
-            const jsonAnswer = JSON.parse(answer) satisfies Omit<EstimatedBudget, 'salary' | 'max_budget'>;
-            return { ...jsonAnswer, salary, max_budget: maxBudget };
-        } catch (e) {
-            return { error: 'unexpected answer format', answer };
+        if ('error' in budgetSuggestion) {
+            return { error: budgetSuggestion.error, answer: budgetSuggestion.context ?? '' };
         }
+
+        return { ...budgetSuggestion, salary, max_budget: maxBudget };
     }
 
-    /*
+    /**
     To make a guess about the character salary, we now live expenses are:
     - SOC 2, Very poor, month cost Cr 400
     - SOC 4, Poor, month cost Cr 800
@@ -89,7 +100,7 @@ export class BudgetEstimator {
     - regular 40%
     - veteran 20%
     - elite 10%
-  */
+    */
     private estimateSalary(character: Character, experience?: Experience): number {
         const expensesPctByExperience: Record<Experience, number> = {
             recruit: 70,
