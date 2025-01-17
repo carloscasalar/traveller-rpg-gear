@@ -1,8 +1,8 @@
 import { Ai, AiModels } from '@cloudflare/workers-types';
+import { stripIndent } from 'common-tags';
 import { AskOptions, QuestionRepository } from '../QuestionRepository';
 import { JsonUnmarshaler } from '../json/JsonUnmarshaler';
 import { ErrorAware } from '../types/returnTypes';
-import { stripIndent } from 'common-tags';
 
 const questionModel: keyof AiModels = '@cf/meta/llama-3.1-8b-instruct-awq';
 const to768EmbeddingsModel: keyof AiModels = '@cf/baai/bge-base-en-v1.5';
