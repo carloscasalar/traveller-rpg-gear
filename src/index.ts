@@ -42,7 +42,7 @@ app.post('api/v1/budget', async (c) => {
     return c.json(estimation);
 });
 
-app.post('api/v1/equipment/wip', async (c) => {
+app.post('api/v1/equipment', async (c) => {
     // Read and validate the character from the body
     let character: Character;
     try {
@@ -108,102 +108,6 @@ app.post('api/v1/equipment/wip', async (c) => {
         commodities: commoditiesDescription,
         budget,
     });
-});
-
-app.post('api/v1/equipment', async (c) => {
-    // Body is expected to have a character
-    const character = await c.req.json<Character>();
-    const name = `${character.first_name} ${character.surname}`;
-    const characteristics = Object.entries(character.characteristics)
-        .map(([key, value]) => `${key}: ${value}`)
-        .join(', ');
-    const skills = character.skills.join(', ');
-    const { experience, role } = character;
-
-    const question = stripIndents`
-		${name} is a human who is a ${experience} ${role}.
-		If we rate experience from lower to highest, they will be:
-		- recruit
-		- rookie
-		- intermediate
-		- regular
-		- veteran
-		- elite
-
-		${name} characteristics are ${characteristics}.
-
-		To make a guess about its equipment budget, bear in mind that these are average monthly living expenses based on the SOC characteristic are:
-		- SOC 2, Very poor, month cost Cr 400
-		- SOC 4, Poor, month cost Cr 800
-		- SOC 5, Low, month cost Cr 1,000
-		- SOC 6, Average, month cost Cr 1,200
-		- SOC 7, Good, month cost Cr 1,500
-		- SOC 8, High, month cost Cr 2,000
-		- SOC 10, Very High, month cost Cr 2,500
-		- SOC 12, Rich, month cost Cr 5,000
-		- SOC 14, Very Rich, month cost Cr 12,000
-		- SOC 15, Ludicrously Rich, month cost Cr 20,000
-
-		According to its experience level, ${name} had accumulated a certain amount of credits to spend on equipment.
-
-		${name} skills are ${skills}.
-
-		Typically it will have the equipment necessary for its profession. It will very rarely exceed TL12. If it is in a profession
-		exposed to combat, it will have a bladed weapon, a firearm and the best armour it can afford. If there is a budget to spare,
-		you can also suggest some unexpected equipment for someone in his profession. If it is not a combat-exposed profession,
-		it will typically possess a small sidearm and/or a handgun and light armour. Following this criterion, suggest a
-		list of equipment that ${name} may have accumulated and carried with them.
-	`;
-
-    const embeddings = await c.env.AI.run('@cf/baai/bge-base-en-v1.5', { text: question });
-    const vectors = embeddings.data[0];
-
-    const vectorQuery = await c.env.VECTORIZE.query(vectors, { topK: 20 });
-    let itemIds: string[] = [];
-    if (vectorQuery.count > 0) {
-        itemIds = vectorQuery.matches.map((match) => match.id);
-        console.log(
-            'scores',
-            vectorQuery.matches.map((match) => match.score),
-        );
-    }
-
-    let equipmentList: string[] = [];
-    if (itemIds.length > 0) {
-        const query = `SELECT * FROM equipment WHERE id IN (SELECT value FROM json_each(?1))`;
-        const allIds = JSON.stringify(itemIds);
-        const { results } = await c.env.DB.prepare(query).bind(allIds).all<Equipment>();
-        if (results)
-            equipmentList = results.map(
-                (e) => `${e.name}, TL: ${e.tl}, Price: ${e.price}, Law: ${e.law}, Mass: ${e.mass}, Skill: ${e.skill}, Notes: ${e.notes}`,
-            );
-    } else {
-        console.log('***** No equipment suggestions found');
-    }
-
-    const contextMessage = equipmentList.length ? `Context:\n${equipmentList.map((item) => `- ${item}`).join('\n')}` : '';
-    console.log('contextMessage', contextMessage);
-
-    const systemPrompt = stripIndents`
-	   You are a Traveller RPG assistant helping to design remarkable NPCs for the adventure.
-	   When answering the question or responding, use the context provided, if it is provided and relevant.
-	   Answer in JSON list format.
-	   DON'T explain the answer, just provide the list of equipment.
-	`;
-
-    const result = await c.env.AI.run('@cf/meta/llama-3-8b-instruct', {
-        messages: [
-            ...(equipmentList.length ? [{ role: 'system', content: contextMessage }] : []),
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: question },
-        ],
-    });
-
-    if ('response' in result) {
-        return c.json(result.response);
-    }
-
-    return c.json({ error: 'unable to generate response' }, 500);
 });
 
 app.get('api/v1/equipment', async (c) => {
