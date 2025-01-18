@@ -92,7 +92,22 @@ app.post('api/v1/equipment/wip', async (c) => {
         toolsDescription = result.map((t) => `${t.name} (TL ${t.tl}) ${t.price}`).join(', ');
     }
 
-    return c.json({ armour: armourDescription, weapons: weaponsDescription, tools: toolsDescription, budget });
+    const commoditiesSuggestions = await personalShopper.suggestCommodities(character, budget.commodities);
+    let commoditiesDescription: string | null = null;
+    if ('error' in commoditiesSuggestions) {
+        log('unable to suggest commodities', commoditiesSuggestions.context);
+    } else if (commoditiesSuggestions.found) {
+        const { result } = commoditiesSuggestions;
+        commoditiesDescription = result.map((c) => `${c.name} (TL ${c.tl}) ${c.price}`).join(', ');
+    }
+
+    return c.json({
+        armour: armourDescription,
+        weapons: weaponsDescription,
+        tools: toolsDescription,
+        commodities: commoditiesDescription,
+        budget,
+    });
 });
 
 app.post('api/v1/equipment', async (c) => {

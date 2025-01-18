@@ -191,6 +191,34 @@ export class PersonalShopper {
         return { found: true, result: toolsSuggestions };
     }
 
+    public async suggestCommodities(character: Character, budget: number): Promise<SearchResult<Equipment[]>> {
+        const commoditiesSection: SectionsCriteria = {
+            type: 'sections-subsection',
+            sections: [
+                { section: 'Electronics', subsection: 'Gadgets & Essentials' },
+                { section: 'Electronics', subsection: 'Gadgets and Essentials' },
+                { section: 'Home Comforts', subsection: 'Historical and Religious Texts' },
+                { section: 'Home Comforts', subsection: 'Home Comforts' },
+                { section: 'Medical Supplies', subsection: 'Drugs and Pharmaceuticals' },
+                { section: 'Survival Gear', subsection: 'Atmospheric Protection' },
+            ],
+        };
+        const suitableCommodities = await this.getAvailableItems(commoditiesSection, character, budget);
+        if ('error' in suitableCommodities || suitableCommodities.length === 0) {
+            return { found: false };
+        }
+
+        const whatDoIWant = 'I want you to suggest me some commodities suitable for my needs if any';
+        const commoditiesSuggestions = await this.suggestEquipment(character, whatDoIWant, suitableCommodities, budget);
+        if ('error' in commoditiesSuggestions) {
+            this.logError(`Error suggesting commodities: ${commoditiesSuggestions.error}`);
+            this.log('raw commodities suggestion:', commoditiesSuggestions.context);
+            return { found: false };
+        }
+
+        return { found: true, result: commoditiesSuggestions };
+    }
+
     private async getAvailableItems(section: SectionsCriteria, character: Character, budget: number): Promise<ErrorAware<Equipment[]>> {
         if (budget <= 0) {
             return [];
