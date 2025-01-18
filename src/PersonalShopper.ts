@@ -156,6 +156,41 @@ export class PersonalShopper {
         return { found: true, result: weapons };
     }
 
+    public async suggestTools(character: Character, budget: number): Promise<SearchResult<Equipment[]>> {
+        const toolsSection: SectionsCriteria = {
+            type: 'sections-subsection',
+            sections: [
+                { section: 'Tools', subsection: 'Tools' },
+                { section: 'Electronics', subsection: 'Communications' },
+                { section: 'Electronics', subsection: 'Computers' },
+                { section: 'Electronics', subsection: 'Gadgets & Essentials' },
+                { section: 'Electronics', subsection: 'Gadgets and Essentials' },
+                { section: 'Electronics', subsection: 'Sensors' },
+                { section: 'Electronics', subsection: 'Software Packages' },
+                { section: 'Electronics', subsection: 'Vision' },
+                { section: 'Electronics', subsection: 'Vision and Detection' },
+                { section: 'Medical Supplies', subsection: 'Medical Equipment' },
+                { section: 'Survival Gear', subsection: 'Gadgets and Essentials' },
+                { section: 'Survival Gear', subsection: 'General Survival Gear' },
+                { section: 'Survival Gear', subsection: 'Vacuum Environments' },
+            ],
+        };
+        const suitableTools = await this.getAvailableItems(toolsSection, character, budget);
+        if ('error' in suitableTools || suitableTools.length === 0) {
+            return { found: false };
+        }
+
+        const whatDoIWant = 'I want you to suggest me some tools suitable for my needs if any';
+        const toolsSuggestions = await this.suggestEquipment(character, whatDoIWant, suitableTools, budget);
+        if ('error' in toolsSuggestions) {
+            this.logError(`Error suggesting tools: ${toolsSuggestions.error}`);
+            this.log('raw tools suggestion:', toolsSuggestions.context);
+            return { found: false };
+        }
+
+        return { found: true, result: toolsSuggestions };
+    }
+
     private async getAvailableItems(section: SectionsCriteria, character: Character, budget: number): Promise<ErrorAware<Equipment[]>> {
         if (budget <= 0) {
             return [];

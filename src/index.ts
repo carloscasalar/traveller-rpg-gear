@@ -83,7 +83,16 @@ app.post('api/v1/equipment/wip', async (c) => {
         weaponsDescription = result.map((w) => `${w.name} (TL ${w.tl}) ${w.price}`).join(', ');
     }
 
-    return c.json({ armour: armourDescription, weapons: weaponsDescription, budget });
+    const toolsSuggestions = await personalShopper.suggestTools(character, budget.tools);
+    let toolsDescription: string | null = null;
+    if ('error' in toolsSuggestions) {
+        log('unable to suggest tools', toolsSuggestions.context);
+    } else if (toolsSuggestions.found) {
+        const { result } = toolsSuggestions;
+        toolsDescription = result.map((t) => `${t.name} (TL ${t.tl}) ${t.price}`).join(', ');
+    }
+
+    return c.json({ armour: armourDescription, weapons: weaponsDescription, tools: toolsDescription, budget });
 });
 
 app.post('api/v1/equipment', async (c) => {
