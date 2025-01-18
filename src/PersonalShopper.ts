@@ -1,7 +1,7 @@
 import { stripIndent } from 'common-tags';
 import { z } from 'zod';
 
-import { Equipment, EquipmentCriteria, EquipmentRepository } from './EquipmentRepository';
+import { Equipment, EquipmentCriteria, EquipmentRepository, SectionsCriteria } from './EquipmentRepository';
 import { QuestionRepository } from './QuestionRepository';
 import { Character, experienceLevels } from './character';
 import { ZodJsonUnmarshaler } from './json/ZodJsonUnmarshaler';
@@ -30,13 +30,27 @@ const questionEquipmentUnmarshaler = new ZodJsonUnmarshaler(
     `,
 );
 
+const armourSection: SectionsCriteria = {
+    type: 'sections',
+    sections: ['Armour'],
+};
+
+const augmentSection: SectionsCriteria = {
+    type: 'sections-subsection',
+    sections: [
+        { section: 'Armour', subsection: 'Armour Modifications' },
+        { section: 'Armour', subsection: 'Armour Mods' },
+        { section: 'Augments', subsection: 'Augment Options' },
+    ],
+};
+
 export class PersonalShopper {
     constructor(
         private readonly equipmentRepository: EquipmentRepository,
         private readonly questionRepository: QuestionRepository,
     ) {}
     public async suggestArmour(character: Character, budget: number): Promise<SearchResult<ArmourSuggestion>> {
-        const suitableAmours = await this.getAvailableArmours(character, budget);
+        const suitableAmours = await this.getAvailableItems(armourSection, character, budget);
         if ('error' in suitableAmours || suitableAmours.length === 0) {
             return { found: false };
         }
@@ -54,7 +68,7 @@ export class PersonalShopper {
         }
         const armour = armourSuggestions[0];
         const remainingBudget = budget - creditsFromCrFormat(armour.price);
-        const suitableAugments = await this.getAvailableAugments(character, remainingBudget);
+        const suitableAugments = await this.getAvailableItems(augmentSection, character, remainingBudget);
         if ('error' in suitableAugments || suitableAugments.length === 0) {
             return {
                 found: true,
@@ -82,36 +96,15 @@ export class PersonalShopper {
         };
     }
 
-    private async getAvailableArmours(character: Character, budget: number): Promise<ErrorAware<Equipment[]>> {
-        const armourCriteria: EquipmentCriteria = {
-            sections: {
-                type: 'sections',
-                sections: ['Armour'],
-            },
+    private async getAvailableItems(section: SectionsCriteria, character: Character, budget: number): Promise<ErrorAware<Equipment[]>> {
+        const criteria: EquipmentCriteria = {
+            sections: section,
             maxPrice: budget,
             maxTL: 12, // TODO: infer from SOC and/or experience
         };
 
-        const additionalArmourContext = `suitable for a ${character.role} with ${character.experience} experience.`;
-        return this.equipmentRepository.findByCriteria(armourCriteria, additionalArmourContext, 30);
-    }
-
-    private async getAvailableAugments(character: Character, budget: number): Promise<ErrorAware<Equipment[]>> {
-        const armourCriteria: EquipmentCriteria = {
-            sections: {
-                type: 'sections-subsection',
-                sections: [
-                    { section: 'Armour', subsection: 'Armour Modifications' },
-                    { section: 'Armour', subsection: 'Armour Mods' },
-                    { section: 'Augments', subsection: 'Augment Options' },
-                ],
-            },
-            maxPrice: budget,
-            maxTL: 12, // TODO: infer from SOC and/or experience
-        };
-
-        const additionalArmourContext = `suitable for a ${character.role} with ${character.experience} experience.`;
-        return this.equipmentRepository.findByCriteria(armourCriteria, additionalArmourContext, 30);
+        const additionalContext = `suitable for a ${character.role} with ${character.experience} experience.`;
+        return this.equipmentRepository.findByCriteria(criteria, additionalContext, 30);
     }
 
     private async suggestEquipment(
