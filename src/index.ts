@@ -23,7 +23,7 @@ import { Env } from './env';
 
 const app = new Hono<{ Bindings: Env }>();
 
-app.post('api/v1/budget', async (c) => {
+app.post('api/v1/characters/budget', async (c) => {
     let character: Character;
     try {
         //TODO validate character
@@ -42,7 +42,7 @@ app.post('api/v1/budget', async (c) => {
     return c.json(estimation);
 });
 
-app.post('api/v1/equipment', async (c) => {
+app.post('api/v1/characters/equipment', async (c) => {
     // Read and validate the character from the body
     let character: Character;
     try {
@@ -110,7 +110,7 @@ app.post('api/v1/equipment', async (c) => {
     });
 });
 
-app.get('api/v1/equipment', async (c) => {
+app.get('api/v1/admin/equipment', async (c) => {
     const firstEquipment = await c.env.DB.prepare('SELECT * FROM equipment ORDER BY Tl, Name').first<Equipment>();
 
     if (!firstEquipment) {
