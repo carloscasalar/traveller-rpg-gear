@@ -64,19 +64,26 @@ app.post('api/v1/equipment/wip', async (c) => {
     const personalShopper = new PersonalShopper(equipmentRepository, questionRepository);
 
     const armourSuggestion = await personalShopper.suggestArmour(character, budget.armour);
+    let armourDescription: string | null = null;
     if ('error' in armourSuggestion) {
-        return c.json({ error: 'unable to suggest armour, please try again', message: armourSuggestion.context }, 500);
+        log('unable to suggest armour', armourSuggestion.context);
+    } else if (armourSuggestion.found) {
+        const {
+            result: { armour, augments },
+        } = armourSuggestion;
+        armourDescription = stripIndents`${armour.name} (TL ${armour.tl}) ${armour.price} ${augments.length ? '[Augments: ' + augments.map((a) => a.name).join(', ') + ']' : ''}`;
     }
-    if (!armourSuggestion.found) {
-        return c.json({ armour: null });
-    }
-    const {
-        result: { armour, augments },
-    } = armourSuggestion;
-    const armourDescription = stripIndents`${armour.name} (TL ${armour.tl}) ${armour.price}
-    ${augments.length ? '- Augments: ' + augments.map((a) => a.name).join(', ') : ''}`;
 
-    return c.json({ armour: armourDescription, budget });
+    const weaponsSuggestions = await personalShopper.suggestWeapons(character, budget.weapons);
+    let weaponsDescription: string | null = null;
+    if ('error' in weaponsSuggestions) {
+        log('unable to suggest weapons', weaponsSuggestions.context);
+    } else if (weaponsSuggestions.found) {
+        const { result } = weaponsSuggestions;
+        weaponsDescription = result.map((w) => `${w.name} (TL ${w.tl}) ${w.price}`).join(', ');
+    }
+
+    return c.json({ armour: armourDescription, weapons: weaponsDescription, budget });
 });
 
 app.post('api/v1/equipment', async (c) => {
@@ -258,3 +265,7 @@ app.onError((err, c) => {
 });
 
 export default app;
+
+function log(...args: any[]) {
+    console.log('*** Index App: ', ...args);
+}

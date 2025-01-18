@@ -1,11 +1,12 @@
 import { stripIndent } from 'common-tags';
+import { Context } from 'hono';
 import { z } from 'zod';
 
 import { Equipment, EquipmentCriteria, EquipmentRepository, SectionsCriteria } from './EquipmentRepository';
 import { QuestionRepository } from './QuestionRepository';
 import { Character, experienceLevels } from './character';
 import { ZodJsonUnmarshaler } from './json/ZodJsonUnmarshaler';
-import { creditsFromCrFormat } from './price';
+import { creditsFromCrFormat, getTotalCost } from './price';
 import { ErrorAware, SearchResult } from './types/returnTypes';
 
 export interface ArmourSuggestion {
@@ -30,26 +31,17 @@ const questionEquipmentUnmarshaler = new ZodJsonUnmarshaler(
     `,
 );
 
-const armourSection: SectionsCriteria = {
-    type: 'sections',
-    sections: ['Armour'],
-};
-
-const augmentSection: SectionsCriteria = {
-    type: 'sections-subsection',
-    sections: [
-        { section: 'Armour', subsection: 'Armour Modifications' },
-        { section: 'Armour', subsection: 'Armour Mods' },
-        { section: 'Augments', subsection: 'Augment Options' },
-    ],
-};
-
 export class PersonalShopper {
     constructor(
         private readonly equipmentRepository: EquipmentRepository,
         private readonly questionRepository: QuestionRepository,
     ) {}
+
     public async suggestArmour(character: Character, budget: number): Promise<SearchResult<ArmourSuggestion>> {
+        const armourSection: SectionsCriteria = {
+            type: 'sections',
+            sections: ['Armour'],
+        };
         const suitableAmours = await this.getAvailableItems(armourSection, character, budget);
         if ('error' in suitableAmours || suitableAmours.length === 0) {
             return { found: false };
@@ -68,6 +60,14 @@ export class PersonalShopper {
         }
         const armour = armourSuggestions[0];
         const remainingBudget = budget - creditsFromCrFormat(armour.price);
+        const augmentSection: SectionsCriteria = {
+            type: 'sections-subsection',
+            sections: [
+                { section: 'Armour', subsection: 'Armour Modifications' },
+                { section: 'Armour', subsection: 'Armour Mods' },
+                { section: 'Augments', subsection: 'Augment Options' },
+            ],
+        };
         const suitableAugments = await this.getAvailableItems(augmentSection, character, remainingBudget);
         if ('error' in suitableAugments || suitableAugments.length === 0) {
             return {
@@ -96,7 +96,70 @@ export class PersonalShopper {
         };
     }
 
+    public async suggestWeapons(character: Character, budget: number): Promise<SearchResult<Equipment[]>> {
+        const firearmSection: SectionsCriteria = {
+            type: 'sections-subsection',
+            sections: [
+                { section: 'Weapons', subsection: 'Energy Pistols' },
+                { section: 'Weapons', subsection: 'Energy Rifles' },
+                { section: 'Weapons', subsection: 'Energy Weapons' },
+                { section: 'Weapons', subsection: 'Energy Weapons (Pistols)' },
+                { section: 'Weapons', subsection: 'Energy Weapons (Rifles)' },
+                { section: 'Weapons', subsection: 'Energy Weapons (Rifles)' },
+                { section: 'Weapons', subsection: 'Projectile Weapons' },
+                { section: 'Weapons', subsection: 'Slug Pistols' },
+                { section: 'Weapons', subsection: 'Slug Rifles' },
+            ],
+        };
+
+        const suitableFirearms = await this.getAvailableItems(firearmSection, character, budget);
+        const weapons: Equipment[] = [];
+        if ('error' in suitableFirearms) {
+            this.logError(`Error getting firearms: ${suitableFirearms.error}`);
+        } else if (suitableFirearms.length > 0) {
+            const whatDoIWant = 'I want you to suggest a weapon suitable for my needs if any';
+            const firearmsSuggestion = await this.suggestEquipment(character, whatDoIWant, suitableFirearms, budget);
+            if ('error' in firearmsSuggestion) {
+                this.logError(`Error suggesting firearms: ${firearmsSuggestion.error}`);
+            } else {
+                weapons.push(...firearmsSuggestion);
+            }
+        }
+
+        const meleeWeaponsSection: SectionsCriteria = {
+            type: 'sections-subsection',
+            sections: [
+                { section: 'Weapons', subsection: 'Melee Weapons' },
+                { section: 'Weapons', subsection: 'Melee Weapons (Blades)' },
+                { section: 'Weapons', subsection: 'Melee Weapons (Bludgeons)' },
+                { section: 'Weapons', subsection: 'Melee Weapons (Unarmed)' },
+                { section: 'Weapons', subsection: 'Melee Weapons (Whips)' },
+            ],
+        };
+        const remainingBudget = budget - getTotalCost(weapons);
+        const suitableMeleeWeapons = await this.getAvailableItems(meleeWeaponsSection, character, remainingBudget);
+        if ('error' in suitableMeleeWeapons) {
+            this.logError(`Error getting melee weapons: ${suitableMeleeWeapons.error}`);
+        } else if (suitableMeleeWeapons.length > 0) {
+            const whatDoIWant = 'I want you to suggest a melee weapon suitable for my needs if any';
+            const meleeWeaponsSuggestion = await this.suggestEquipment(character, whatDoIWant, suitableMeleeWeapons, remainingBudget);
+            if ('error' in meleeWeaponsSuggestion) {
+                this.logError(`Error suggesting melee weapons: ${meleeWeaponsSuggestion.error}`);
+            } else {
+                weapons.push(...meleeWeaponsSuggestion);
+            }
+        }
+
+        if (weapons.length === 0) {
+            return { found: false };
+        }
+        return { found: true, result: weapons };
+    }
+
     private async getAvailableItems(section: SectionsCriteria, character: Character, budget: number): Promise<ErrorAware<Equipment[]>> {
+        if (budget <= 0) {
+            return [];
+        }
         const criteria: EquipmentCriteria = {
             sections: section,
             maxPrice: budget,
