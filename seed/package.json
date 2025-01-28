@@ -1,21 +1,21 @@
 {
-  "name": "migrations",
-  "version": "1.0.0",
-  "description": "",
-  "license": "ISC",
-  "author": "",
-  "type": "module",
-	"private": true,
-  "main": "index.ts",
-  "scripts": {
-    "schema:generate": "node --experimental-strip-types generate-schema-sql.ts",
-		"vectorize": "node --experimental-strip-types vectorize-index.ts",
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "dependencies": {
-    "csv-parse": "5.6.0"
-  },
-  "volta": {
-    "node": "22.12.0"
-  }
+    "name": "migrations",
+    "version": "1.0.0",
+    "description": "",
+    "license": "ISC",
+    "author": "",
+    "type": "module",
+    "private": true,
+    "main": "index.ts",
+    "scripts": {
+        "schema:generate": "node --experimental-strip-types generate-schema-sql.ts",
+        "vectorize": "node --experimental-strip-types vectorize-index.ts",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "dependencies": {
+        "csv-parse": "5.6.0"
+    },
+    "volta": {
+        "node": "22.12.0"
+    }
 }
