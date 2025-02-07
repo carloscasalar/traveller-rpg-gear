@@ -19,7 +19,7 @@
     "zod": "3.24.1"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "0.5.40",
+    "@cloudflare/vitest-pool-workers": "0.6.12",
     "@cloudflare/workers-types": "4.20250129.0",
     "@trivago/prettier-plugin-sort-imports": "5.2.1",
     "@types/common-tags": "1.8.4",
