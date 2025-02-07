@@ -24,7 +24,7 @@
     "@trivago/prettier-plugin-sort-imports": "5.2.1",
     "@types/common-tags": "1.8.4",
     "prettier": "3.4.2",
-    "typescript": "5.5.2",
+    "typescript": "5.7.3",
     "vitest": "2.1.9",
     "wrangler": "3.99.0"
   },
