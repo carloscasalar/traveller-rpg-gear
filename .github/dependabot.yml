@@ -10,7 +10,22 @@ updates:
       timezone: "Europe/Madrid"
     open-pull-requests-limit: 10
     versioning-strategy: auto
-
+    groups:
+      patches:
+        patterns:
+          - "*"
+        update-types:
+          - patch
+      minors:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+      majors:
+        patterns:
+          - "*"
+        update-types:
+          - major
   # Seed directory dependencies
   - package-ecosystem: "npm"
     directory: "/seed"
@@ -20,3 +35,19 @@ updates:
       timezone: "Europe/Madrid"
     open-pull-requests-limit: 10
     versioning-strategy: auto
+    groups:
+      patches:
+        patterns:
+          - "*"
+        update-types:
+          - patch
+      minors:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+      majors:
+        patterns:
+          - "*"
+        update-types:
+          - major
