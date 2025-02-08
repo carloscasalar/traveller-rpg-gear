@@ -15,12 +15,12 @@
   },
   "dependencies": {
     "common-tags": "1.8.2",
-    "hono": "4.6.20",
+    "hono": "4.7.0",
     "zod": "3.24.1"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.6.12",
-    "@cloudflare/workers-types": "4.20250129.0",
+    "@cloudflare/workers-types": "4.20250204.0",
     "@trivago/prettier-plugin-sort-imports": "5.2.2",
     "@types/common-tags": "1.8.4",
     "prettier": "3.4.2",
