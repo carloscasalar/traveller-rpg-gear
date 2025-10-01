@@ -23,7 +23,7 @@
     "@cloudflare/workers-types": "4.20250224.0",
     "@trivago/prettier-plugin-sort-imports": "5.2.2",
     "@types/common-tags": "1.8.4",
-    "prettier": "3.5.3",
+    "prettier": "3.6.2",
     "typescript": "5.8.2",
     "vitest": "2.1.9",
     "wrangler": "3.111.0"
