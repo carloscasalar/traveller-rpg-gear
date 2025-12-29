@@ -30,11 +30,11 @@ export class CloudflareQuestionRepository implements QuestionRepository {
             ],
         });
 
-        if (!('response' in result) || result.response === undefined) {
+        if (typeof result !== 'object' || result === null || !('response' in result) || typeof result.response !== 'string') {
             return { error: `unable get response from model ${questionModel}` };
         }
 
-        const unmarshaledResponse = unmarshaler.unmarshal(result.response!);
+        const unmarshaledResponse = unmarshaler.unmarshal(result.response);
         if ('error' in unmarshaledResponse) {
             return unmarshaledResponse;
         }
@@ -43,11 +43,9 @@ export class CloudflareQuestionRepository implements QuestionRepository {
     }
 
     async askWithoutContext(question: string): Promise<string> {
-        const result = await this.ai.run(questionModel, {
-            prompt: question,
-        });
+        const result = await this.ai.run(questionModel, { prompt: question });
 
-        if ('response' in result) {
+        if (typeof result === 'object' && result !== null && 'response' in result && typeof result.response === 'string') {
             return result.response || '';
         }
 
@@ -56,7 +54,7 @@ export class CloudflareQuestionRepository implements QuestionRepository {
 
     async translateQuestionToEmbeddings(question: string): Promise<number[]> {
         const embeddings = await this.ai.run(to768EmbeddingsModel, { text: question });
-        if ('data' in embeddings) {
+        if (typeof embeddings === 'object' && embeddings !== null && 'data' in embeddings && embeddings.data?.[0]) {
             const vectorizedQuery = embeddings.data[0];
             return vectorizedQuery;
         }

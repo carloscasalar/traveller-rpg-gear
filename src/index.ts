@@ -164,6 +164,9 @@ app.post('api/v1/admin/index', async (c: Context<{ Bindings: Env }>) => {
     // and wait for each row to be processed before moving to the next one.
     for (const { equipment, data } of equipmentListData) {
         const embeddings = await c.env.AI.run('@cf/baai/bge-base-en-v1.5', { text: [data] });
+        if (!('data' in embeddings) || !embeddings.data?.[0]) {
+            throw new Error(`Failed to generate embeddings for equipment: ${equipment.name}`);
+        }
         await c.env.VECTORIZE.upsert([
             {
                 id: equipment.id,
