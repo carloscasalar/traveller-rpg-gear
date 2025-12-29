@@ -10,17 +10,15 @@ updates:
       timezone: "Europe/Madrid"
     open-pull-requests-limit: 10
     versioning-strategy: auto
+    commit-message:
+      prefix: "chore(service)"
     groups:
-      patches:
-        patterns:
-          - "*"
-        update-types:
-          - patch
-      minors:
+      minor-and-patch:
         patterns:
           - "*"
         update-types:
           - minor
+          - patch
       majors:
         patterns:
           - "*"
@@ -35,19 +33,13 @@ updates:
       timezone: "Europe/Madrid"
     open-pull-requests-limit: 10
     versioning-strategy: auto
+    commit-message:
+      prefix: "chore(seed)"
     groups:
-      patches:
-        patterns:
-          - "*"
-        update-types:
-          - patch
-      minors:
+      all-dependencies:
         patterns:
           - "*"
         update-types:
           - minor
-      majors:
-        patterns:
-          - "*"
-        update-types:
+          - patch
           - major
