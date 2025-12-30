@@ -12,6 +12,11 @@ updates:
     versioning-strategy: auto
     commit-message:
       prefix: "chore(service)"
+    ignore:
+      # Ignore vitest v4+ until @cloudflare/vitest-pool-workers adds support
+      # Tracking: https://github.com/cloudflare/workers-sdk/issues/11064
+      - dependency-name: "vitest"
+        update-types: ["version-update:semver-major"]
     groups:
       minor-and-patch:
         patterns:
