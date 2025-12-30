@@ -18,7 +18,7 @@ export class ZodJsonUnmarshaler<T> implements JsonUnmarshaler<T> {
 
         const unmarshalingResult = this.schema.safeParse(parsedData);
         if (unmarshalingResult.error) {
-            return { error: `JSON object doesn't meet expected format: ${unmarshalingResult.error.errors}` };
+            return { error: `JSON object doesn't meet expected format: ${unmarshalingResult.error.issues}` };
         }
 
         return unmarshalingResult.data;
