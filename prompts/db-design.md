@@ -28,3 +28,19 @@ Each item of equipment needs to have:
   - Skill: Some items requires competency in some skill to properly manage them. Empty or null value, means that no special skill is needed. A character will only gather equipment that can handle.
   - Law: Law level in worlds and space stations take a numeric value from 0 (no law) to 18 (Extreme Law,Routinely oppressive and restrictive). The law score of an item is the law level from which it is considered illegal. For example, intrusion software is illegal on words/stations with law levels 4 or beyond so its law score is 4. If an item is always legal (for example a first aid kit) then it will have no law score at all.
 
+Each kind/sub-kind of equipment has additional attributes.
+- Armour:
+  - Protection: is a string meaning the damage protection.
+  - Rad: is a string meaning protection against radiation. "-" when the armour provides no radiation protection.
+  - STR: if any, the minimum strength score required to operate while wearing the armor.
+  - DEX: if any, the minimum dexterity score required to operate while wearing the armor.
+- Weapons:
+  - Firearms:
+    - Range: short distance in meters.
+    - Damage: a string with the base damage.
+    - Magazine: amount of ammo by magazine.
+    - Traits: a string with any traits the weapon has.
+  - Melee: Same attributes as firearms but range is always "melee" and Magazine is always empty. Includes blades, bludgeoning, close combat and shield weapons.
+  - Throwing weapons: same attributes as firearms but has no magazine and trait includes either blast radius or stun, in addition to other effects
+  - Artillery, rockets and missiles: same as firearms but range is in Km. This kind of weapon cannot be considered gear unless their weight are in Kg (usually they are in Tm). Only foot soldiers would consider bear portable artillery weapons like a infantry mortar. So for the shake of simplicity, this DB will not contain artillery weapons.
+  - Explosives: they are meant to blow things but not to be throw or shoot. Stats are the same as firearms but has no magazine and range is always "-"
