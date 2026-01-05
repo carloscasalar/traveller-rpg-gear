@@ -186,24 +186,34 @@ app.post('api/v1/admin/index', async (c: Context<{ Bindings: Env }>) => {
         if (!('data' in embeddings) || !embeddings.data?.[0]) {
             throw new Error(`Failed to generate embeddings for equipment: ${equipment.name}`);
         }
+
+        // Build metadata object, excluding null values
+        const metadata: Record<string, string | number> = {
+            name: equipment.name,
+            section: equipment.section,
+            subsection: equipment.subsection,
+            tl: equipment.tl,
+            weight_kg: equipment.weight_kg,
+            price_cr: equipment.price_cr,
+            species: equipment.species,
+            skill: equipment.skill,
+            notes: equipment.notes,
+            mod: equipment.mod,
+        };
+
+        if (equipment.law_illegal_from !== null) {
+            metadata.law_illegal_from = equipment.law_illegal_from;
+        }
+
+        if (equipment.needs && equipment.needs.length > 0) {
+            metadata.needs = JSON.stringify(equipment.needs);
+        }
+
         await c.env.VECTORIZE.upsert([
             {
                 id: equipment.id,
                 values: embeddings.data[0],
-                metadata: {
-                    name: equipment.name,
-                    section: equipment.section,
-                    subsection: equipment.subsection,
-                    tl: equipment.tl,
-                    weight_kg: equipment.weight_kg,
-                    price_cr: equipment.price_cr,
-                    species: equipment.species,
-                    skill: equipment.skill,
-                    law_illegal_from: equipment.law_illegal_from,
-                    notes: equipment.notes,
-                    mod: equipment.mod,
-                    needs: equipment.needs ? JSON.stringify(equipment.needs) : null,
-                },
+                metadata,
             },
         ]);
     }
