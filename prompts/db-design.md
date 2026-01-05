@@ -1,8 +1,13 @@
-This service provides a set of equipment or gear for a futuristic science fiction character.
+---
+Description: Prompt to help me design the DB of the service
+---
+# Prompt
+I'm building a service that is meant to generate a set of equipment or gear for a futuristic science fiction character (Traveller RPG setting). It is kind of a personal shopper for the character.
 
 Several Character scores affects the equipment they chan gather:
   - Experience. From lower to higher: recruit, rookie, intermediate, regular, veteran, elite. The higher the best equipment they can gather along their previous life. Best equipment usually means more expensive and/or higher technology level
   - Society score (SOC). It is a numeric score between 2 and 12. Means their social position in the social group where they were born. A higher SOC means that a character can obtain better equipment, including items that are beyond what is expected due to their experience.
+  - Role. Each character has a role attached. The role will drive the equipment selection. For example, a marine will favor armour and weapons over other kind of equipment while a diplomat could have on personal defense weapons but a good computer. Roles are: pilot, navigator , engineer , steward , medic , marine , gunner , scout , technician , leader , diplomat , entertainer , trader , thug.
 
 Each item of equipment needs to have:
   - Technology Level (TL): It is a score between 0 and 15. It measures the minimum technology level required to design and build an item. The TL of an item indicates its availability. For example, it is perfectly legitimate for a SOC 11 veteran diplomatic character to carry a knife that requires TL 2, even though, due to their experience and status, they can carry a TL 14 computer. These are the TL levels and their meanings.:
@@ -44,3 +49,21 @@ Each kind/sub-kind of equipment has additional attributes.
   - Throwing weapons: same attributes as firearms but has no magazine and trait includes either blast radius or stun, in addition to other effects
   - Artillery, rockets and missiles: same as firearms but range is in Km. This kind of weapon cannot be considered gear unless their weight are in Kg (usually they are in Tm). Only foot soldiers would consider bear portable artillery weapons like a infantry mortar. So for the shake of simplicity, this DB will not contain artillery weapons.
   - Explosives: they are meant to blow things but not to be throw or shoot. Stats are the same as firearms but has no magazine and range is always "-"
+- Survival: For simplicity we´ll don´t have survival items in the DB
+- Electronics: only electronic items weighing 10 kg or less.
+  - Weight: weight in Kg.
+  - Features: list any features that are noteworthy.
+- Computers: Only computer items weighing 10 kg or less.
+  - Processing: processing capacity in the form of Computer/x where x is an integer meaning the capacity
+- Software: Only characters with computers will choose to have software
+  - Bandwidth: the amount of capacity consumed by the program in a computer.
+- Robots: For simplicity we´ll don´t have robot items in the DB
+- Personal Augmentation:
+  - Body part: limbs/torso/head/
+
+
+I want to design a table or a set of tables to hold such an structure. We can consider a relational approach or another more focused on documentary databases. In addition I want to design an embeddings strategy to be able to perform search like "A weapon suitable for a scout with TL equal or less than 11 and max price of 30000Cr".
+
+Keep in mind that the main DB is a D1 Cloudflare DB and for the embeddings I will use 768 dimension vector index. I can use 1024 if needed though.
+
+# Chatgpt
