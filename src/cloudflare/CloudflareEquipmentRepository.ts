@@ -4,7 +4,6 @@ import { stripIndents } from 'common-tags';
 import { Equipment, EquipmentCriteria, EquipmentRepository } from '../EquipmentRepository';
 import { QuestionRepository } from '../QuestionRepository';
 import { ErrorAware } from '../types/returnTypes';
-import { creditsFromCrFormat } from './../price';
 
 const GOOD_ENOUGH_SCORE_THRESHOLD = 0.7;
 
@@ -58,12 +57,27 @@ export class CloudflareEquipmentRepository implements EquipmentRepository {
             return [];
         }
 
-        const dbQuery = `SELECT * FROM equipment WHERE id IN (SELECT value FROM json_each(?1))`;
+        const dbQuery = `
+            SELECT e.*,
+                   json_group_array(
+                       json_object('need', en.need, 'weight', en.weight)
+                   ) FILTER (WHERE en.need IS NOT NULL) as needs_json
+            FROM equipment e
+            LEFT JOIN equipment_needs en ON e.id = en.equipment_id
+            WHERE e.id IN (SELECT value FROM json_each(?1))
+            GROUP BY e.id
+        `;
         const allIds = JSON.stringify(equipmentIds);
-        const { results } = await this.db.prepare(dbQuery).bind(allIds).all<Equipment>();
+        const rawResults = await this.db.prepare(dbQuery).bind(allIds).all<Equipment & { needs_json: string }>();
+
+        // Parse needs JSON
+        const results = rawResults.results.map((row) => ({
+            ...row,
+            needs: row.needs_json ? JSON.parse(row.needs_json) : [],
+        }));
 
         // Because of these are only the best scored items, they can exceed some of the criteria
-        const meetsPriceCriteria = (e: Equipment) => criteria.maxPrice == undefined || creditsFromCrFormat(e.price) <= criteria.maxPrice!;
+        const meetsPriceCriteria = (e: Equipment) => criteria.maxPrice == undefined || e.price_cr <= criteria.maxPrice!;
         const meetsTLCriteria = (e: Equipment) => criteria.maxTL == undefined || e.tl <= criteria.maxTL!;
         const meetsSectionsCriteria = (e: Equipment) => {
             if (criteria.sections.type === 'sections') {
