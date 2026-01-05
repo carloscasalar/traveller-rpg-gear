@@ -1,40 +1,50 @@
-## Plan: D1 Gear Schema + Embeddings
+## Plan: D1 Gear Schema + Embeddings (Needs + Availability)
 
-Design a D1-friendly schema that supports strict filtering (TL/price/law/species/skill/weight) plus type-specific attributes (weapons/armour/computers/software/etc). Then align your embedding pipeline so Vectorize retrieves “candidate items” semantically, while D1 enforces the hard constraints like “TL ≤ 11” and “price ≤ 30000” for queries such as “weapon suitable for a scout…”.
+Design a D1-friendly schema that supports hard constraints (TL/price/weight/species/skill) and a stable “needs” taxonomy for role-driven selection without coupling items to a closed role list. Use Vectorize for semantic recall/ranking only; enforce hard constraints in D1. Treat legality as an availability factor (no `currentLaw` concept in the system).
 
 ### Steps 1) Normalize core item fields in D1
 
-1. Keep a base `equipment` table (like today) but make `price` an integer `price_cr` and add `law_illegal_from` nullable int, plus a single `weight_kg` numeric field; update `seed/generate-schema-sql.ts` and `seed/schema.sql`.
-2. Add small lookup/bridge tables for multi-valued fields: `equipment_species(equipment_id, species)` and `equipment_skill_req(equipment_id, skill, min_level?)` so “empty = all species/no skill” is representable without string parsing.
-3. Add indexes in D1 on common filters: `(category)`, `(tl)`, `(price_cr)`, `(law_illegal_from)`, and `(category, tl, price_cr)`.
+1. Keep a base `equipment` table as the canonical item record, and normalize for querying:
+    - `price_cr` (INT credits)
+    - `weight_kg` (numeric; single source of truth for item weight)
+    - `law_illegal_from` (nullable INT; illegal at law level ≥ X)
+2. Do not hard-filter by legality by default. `law_illegal_from` is used as a proxy for how restricted/rare the item is.
+3. Add indexes for the hard constraints you expect to apply often: `(category)`, `(tl)`, `(price_cr)`, `(weight_kg)`, `(law_illegal_from)`, and a composite like `(category, tl, price_cr)`.
 
-### Steps 2) Model type-specific attributes with 1:1 detail tables
+### Steps 2) Add “needs” tagging (stable 10–30 vocabulary)
 
-1. Create subtype tables keyed by `equipment_id`:
-    - `armour_stats(protection, rad, str_min, dex_min)`
-    - `weapon_stats(weapon_kind, range_m, range_text, damage, magazine, traits)`
-    - `electronics_stats(features, weight_kg)` and `computer_stats(processing)` and `software_stats(bandwidth)`
-    - `augmentation_stats(body_part)`
-2. Keep `equipment.category` (and optionally `subtype`) as the discriminator; only one subtype row should exist per item.
+1. Introduce a minimal, stable needs vocabulary (target 10–30 needs total; avoid drift).
+2. Store needs per item via a join table with integer weights:
+    - `equipment_needs(equipment_id, need, weight)` where `weight` is an INT 0–10.
+3. Roles are not stored in the DB. Role → needs mapping lives in code and can evolve without rebuilding the DB.
 
-### Steps 3) Define “hard constraint” query path in D1
+### Steps 3) Assign tags/needs during CSV → DB extraction
 
-1. Implement a D1 query function in `src/EquipmentRepository.ts` (and Cloudflare impl) that filters by: category/subtype, TL range, `price_cr` max, law legality, species, and skill compatibility.
-2. Use Vectorize only for ranking, not for enforcing numeric constraints; fetch candidates by ID then filter/verify via D1 (you already do “IDs → D1 rows” in `src/cloudflare/CloudflareEquipmentRepository.ts`).
+1. During ingestion, deterministically derive needs tags (and 0–10 weights) from CSV fields like section/subsection/category/notes.
+2. Ensure the ingestion step only emits needs from the approved vocabulary and fails/flags unknown tags.
+3. Implement this in the seed pipeline (`seed/generate-schema-sql.ts` → generated `seed/schema.sql`) so D1 is enriched before the worker runs.
 
-### Steps 4) Update embeddings: what to embed + metadata
+### Steps 4) Model type-specific attributes (only where you have data)
 
-1. In the indexer endpoint `src/index.ts`, build the embedded document from normalized fields + subtype stats (e.g., weapon damage/range/traits; armour protection/rad; computer processing; software bandwidth).
-2. Store key scalars in Vectorize metadata too (e.g., `category`, `tl`, `price_cr`, `weapon_kind`) to help debugging and potential future metadata filtering, but still treat D1 as the source of truth.
+1. If/when you have structured attributes for weapons/armour/computers/software/etc, use 1:1 detail tables keyed by `equipment_id`.
+2. Do not duplicate shared fields (price/TL/weight/law) into subtype tables; keep them on `equipment`.
 
-### Steps 5) Fix price parsing + data hygiene in ingestion
+### Steps 5) Retrieval: D1 enforces constraints, Vectorize ranks
 
-1. Update `src/price.ts` and the seed ingestion to robustly parse: `Cr1,200,000`, empty/`-`, and optionally `MCr` into integer credits (or mark unpriced items as null).
-2. Re-run the generator + re-index so Vectorize reflects the new normalized fields.
+1. Keep the current pattern: Vectorize returns candidate IDs; D1 fetches rows and enforces hard constraints.
+2. Use needs overlap (role→needs) as a ranking signal.
+3. Use legality as availability (soft) signal:
+    - Lower `law_illegal_from` ⇒ generally harder to acquire (more restricted across the setting).
+    - Higher SOC/experience ⇒ can still acquire restricted items more often (reduce the penalty), but not guaranteed.
 
-### Further Considerations 1) Clarify 2 key decisions before finalizing schema
+### Steps 6) Update embeddings to include needs + availability context
 
-1. Roles will NOT be stored in the DB. Instead, define a stable taxonomy of “needs” (tags) and tag each item with one or more needs plus an optional weight/score (e.g., `needs:combat:primary=0.9`, `needs:medical=0.3`). Roles (open-ended and changeable) will be translated to a set of needs at request time (or via a separate, small role→needs mapping store/config).
-2. `law_illegal_from` will mean “illegal at ≥ X” and will be nullable for always-legal items (confirmed).
+1. Update the indexing document/template so it includes needs tags + weights and `law_illegal_from` (framed as availability/restriction, not a strict compliance gate).
+2. Store these fields in Vectorize metadata too for debugging.
+3. Re-index after schema/tagging changes so Vectorize reflects the enriched D1 data.
 
-If you confirm those two clarifications, I can refine the exact table DDL and the exact text/metadata template used in the Vectorize indexing step.
+### Further Considerations
+
+1. Keep needs vocabulary stable (10–30) to minimize re-tagging and re-index churn.
+2. Make ingestion deterministic (same CSV row ⇒ same tags/weights) to avoid drift.
+3. Define a simple, testable availability scoring function so SOC/experience and `law_illegal_from` interact predictably.
