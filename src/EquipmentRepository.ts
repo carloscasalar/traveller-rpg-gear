@@ -1,4 +1,10 @@
+import { Need } from './needs';
 import { ErrorAware } from './types/returnTypes';
+
+export interface EquipmentNeed {
+    need: Need;
+    weight: number; // 0-10
+}
 
 export interface Equipment {
     id: string;
@@ -18,6 +24,7 @@ export interface Equipment {
     law: number;
     notes: string;
     mod: string;
+    needs?: EquipmentNeed[]; // Optional for now; will be populated from DB join
 }
 
 const sections = [
