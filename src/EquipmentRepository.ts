@@ -1,4 +1,10 @@
+import { Need } from './needs';
 import { ErrorAware } from './types/returnTypes';
+
+export interface EquipmentNeed {
+    need: Need;
+    weight: number; // 0-10
+}
 
 export interface Equipment {
     id: string;
@@ -6,8 +12,8 @@ export interface Equipment {
     subsection: string;
     name: string;
     tl: number;
-    mass: number;
-    price: string;
+    weight_kg: number;
+    price_cr: number;
     ammo_price: string;
     species: string;
     skill: string;
@@ -15,9 +21,10 @@ export interface Equipment {
     page: number;
     contraband: number;
     category: string;
-    law: number;
+    law_illegal_from: number | null;
     notes: string;
     mod: string;
+    needs?: EquipmentNeed[]; // Populated from equipment_needs join
 }
 
 const sections = [
