@@ -16,17 +16,17 @@
   "dependencies": {
     "common-tags": "1.8.2",
     "hono": "4.11.7",
-    "zod": "4.3.4"
+    "zod": "4.3.6"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "0.12.7",
-    "@cloudflare/workers-types": "4.20260127.0",
-    "@trivago/prettier-plugin-sort-imports": "6.0.0",
+    "@cloudflare/vitest-pool-workers": "0.12.8",
+    "@cloudflare/workers-types": "4.20260131.0",
+    "@trivago/prettier-plugin-sort-imports": "6.0.2",
     "@types/common-tags": "1.8.4",
-    "prettier": "3.7.4",
+    "prettier": "3.8.1",
     "typescript": "5.9.3",
     "vitest": "3.2.4",
-    "wrangler": "4.59.1"
+    "wrangler": "4.61.1"
   },
   "volta": {
     "node": "22.21.1"
