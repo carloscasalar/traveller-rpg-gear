@@ -6,7 +6,7 @@ import { Equipment, EquipmentCriteria, EquipmentRepository, SectionsCriteria } f
 import { QuestionRepository } from './QuestionRepository';
 import { Character, experienceLevels } from './character';
 import { ZodJsonUnmarshaler } from './json/ZodJsonUnmarshaler';
-import { creditsFromCrFormat, getTotalCost } from './price';
+import { getTotalCost } from './price';
 import { ErrorAware, SearchResult } from './types/returnTypes';
 
 export interface ArmourSuggestion {
@@ -59,7 +59,7 @@ export class PersonalShopper {
             this.log('More than one armour suggested, taking the first one', armourSuggestions.map((a) => `${a.id}: ${a.name}`).join(', '));
         }
         const armour = armourSuggestions[0];
-        const remainingBudget = budget - creditsFromCrFormat(armour.price);
+        const remainingBudget = budget - armour.price_cr;
         const augmentSection: SectionsCriteria = {
             type: 'sections-subsection',
             sections: [
@@ -241,10 +241,7 @@ export class PersonalShopper {
     ): Promise<ErrorAware<Equipment[]>> {
         const additionalShoppingContext = stripIndent`These are the available items in format "id: name [section/subsection] [tl] [price in credits] [weight in kg] [skill requirement if any]:
         ${itemsAvailable
-            .map(
-                (i) =>
-                    `${i.id}: ${i.name} [${i.section}/${i.subsection}] [${i.tl}] [${creditsFromCrFormat(i.price)}] [${i.mass}] [${i.skill}]`,
-            )
+            .map((i) => `${i.id}: ${i.name} [${i.section}/${i.subsection}] [${i.tl}] [${i.price_cr}] [${i.weight_kg}] [${i.skill}]`)
             .join('\n')}
         `;
         this.log('shopping context:', additionalShoppingContext);
