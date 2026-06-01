@@ -19,13 +19,13 @@
     "zod": "4.3.4"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "0.12.7",
+    "@cloudflare/vitest-pool-workers": "0.16.11",
     "@cloudflare/workers-types": "4.20260127.0",
     "@trivago/prettier-plugin-sort-imports": "6.0.0",
     "@types/common-tags": "1.8.4",
     "prettier": "3.7.4",
     "typescript": "5.9.3",
-    "vitest": "3.2.4",
+    "vitest": "4.1.8",
     "wrangler": "4.59.1"
   },
   "volta": {
