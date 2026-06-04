@@ -15,7 +15,7 @@
   },
   "dependencies": {
     "common-tags": "1.8.2",
-    "hono": "4.12.7",
+    "hono": "4.12.21",
     "zod": "4.3.4"
   },
   "devDependencies": {
